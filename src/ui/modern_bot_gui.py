@@ -10,7 +10,6 @@ Ultra-modern GUI using CustomTkinter with:
 
 import asyncio
 import threading
-import webbrowser
 from datetime import datetime
 from pathlib import Path
 
@@ -403,12 +402,55 @@ class ModernBotGUI:
             self._add_log(f"❌ Error stopping bot: {e}")
 
     def open_browser(self):
-        """Open browser for SimpleMMO"""
+        """Open browser for SimpleMMO using Playwright"""
         try:
-            url = "https://web.simple-mmo.com/"
-            webbrowser.open(url)
-            self._add_log("🌐 Browser opened")
-            logger.info("🌐 Browser opened")
+            # Try to get existing web engine first
+            import asyncio
+
+            async def launch_browser():
+                # Try relative import first, then absolute
+                try:
+                    from ..automation.web_engine import get_web_engine
+                except ImportError:
+                    import sys
+
+                    sys.path.append(str(Path(__file__).parent.parent.parent))
+                    from src.automation.web_engine import get_web_engine
+
+                engine = await get_web_engine()
+                if engine:
+                    page = await engine.get_page()
+                    if page:
+                        await page.goto("https://web.simple-mmo.com/")
+                        return True
+                return False
+
+            # Run in separate thread to avoid blocking GUI
+            def run_browser():
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    success = loop.run_until_complete(launch_browser())
+                    if success:
+                        self._add_log("🌐 Playwright browser opened")
+                        logger.info("🌐 Playwright browser opened")
+                    else:
+                        # Fallback to system browser
+                        import webbrowser
+
+                        webbrowser.open("https://web.simple-mmo.com/")
+                        self._add_log("🌐 System browser opened (fallback)")
+                        logger.info("🌐 System browser opened (fallback)")
+                except Exception as e:
+                    # Fallback to system browser
+                    import webbrowser
+
+                    webbrowser.open("https://web.simple-mmo.com/")
+                    self._add_log(f"🌐 Browser opened (fallback): {e}")
+                    logger.info(f"🌐 Browser opened (fallback): {e}")
+
+            threading.Thread(target=run_browser, daemon=True).start()
+
         except Exception as e:
             logger.error(f"❌ Failed to open browser: {e}")
             self._add_log(f"❌ Failed to open browser: {e}")

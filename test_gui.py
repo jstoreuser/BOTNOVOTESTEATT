@@ -1,5 +1,5 @@
 """
-Test script for DearPyGui GUI
+Test script for Modern GUI (CustomTkinter)
 """
 
 import sys
@@ -15,14 +15,30 @@ sys.path.insert(0, str(current_dir))
 def test_gui():
     """Test the GUI functionality"""
     try:
-        print("🚀 Testing DearPyGui GUI...")
+        print("🚀 Testing Modern GUI (CustomTkinter)...")
 
-        # Test import
-        print("✅ BotGUI imported successfully")
+        # Test CustomTkinter import
+        try:
+            import customtkinter
+
+            print("✅ CustomTkinter installed")
+        except ImportError:
+            print("❌ CustomTkinter not installed - run: pip install customtkinter")
+            return
+
+        # Test GUI import
+        try:
+            from src.ui.modern_bot_gui import ModernBotGUI
+
+            print("✅ Modern GUI imported successfully")
+        except ImportError as e:
+            print(f"❌ Failed to import Modern GUI: {e}")
+            return
 
         # Test basic initialization (don't run the full GUI)
-        print("✅ GUI test completed successfully!")
-        print("💡 To run the full GUI, use: python run_gui.py")
+        print("✅ Modern GUI test completed successfully!")
+        print("💡 To run the Modern GUI, use: python src/main.py")
+        print("💡 To run the DearPyGui fallback, use: python run_gui.py")
 
     except Exception as e:
         print(f"❌ Error testing GUI: {e}")

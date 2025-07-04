@@ -42,12 +42,16 @@ O bot funciona baseado em **turnos de step**, como o jogo:
 
 ## 🚀 INÍCIO RÁPIDO
 
-### 🎮 **Interface Gráfica (Padrão)**
+### 🎮 **Interface Gráfica Moderna (Padrão)**
 ```bash
 python src/main.py
 ```
-- **Start/Pause/Stop** bot controls
-- **Real-time configuration** (enable/disable combat, gathering)
+- ✨ **CustomTkinter** - Interface ultra-moderna
+- 🎨 **Dark/Light Mode** automático
+- ⚙️ **Real-time configuration** (enable/disable combat, gathering)
+- 📊 **Tabbed interface** com Statistics, Logs, Control
+- 🎛️ **Modern switches** e botões estilizados
+- 🌐 **Playwright Browser** integrado (não abre browser externo)
 - **Browser launcher** integration
 - **Modern dark theme** interface
 
