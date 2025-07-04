@@ -159,3 +159,26 @@ site/
 # ==========================================
 pip-log.txt
 pip-delete-this-directory.txt
+
+# ==========================================
+# ARQUIVOS ANTIGOS/DUPLICADOS - NÃO RASTREAR
+# ==========================================
+# Estes arquivos são versões antigas ou duplicadas que devem ser ignoradas
+botlib.py
+demo_bot_completo.py
+visual_test.py
+test_bot.py
+old_*.py
+*_old.py
+*_backup.py
+*.bak
+
+# Arquivos de texto diversos na raiz
+*.txt
+!requirements*.txt
+!requirements*.in
+!README*.txt
+
+# Configurações antigas
+config_old.yaml
+config.backup.yaml
