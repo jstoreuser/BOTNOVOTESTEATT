@@ -15,7 +15,14 @@ import dearpygui.dearpygui as dpg
 from loguru import logger
 
 # Import bot components
-from .bot_runner import BotRunner
+from ..bot_runner import BotRunner
+import sys
+from pathlib import Path
+
+# Add project root to path for browser_launcher
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from browser_launcher import BrowserLauncher
 
 

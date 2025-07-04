@@ -17,7 +17,7 @@ def test_gui():
         print("🚀 Testing DearPyGui GUI...")
 
         # Test import
-        from src.bot_gui import BotGUI
+        from src.ui.bot_gui import BotGUI
         print("✅ BotGUI imported successfully")
 
         # Test basic initialization (don't run the full GUI)

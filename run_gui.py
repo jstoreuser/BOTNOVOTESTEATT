@@ -14,7 +14,7 @@ sys.path.insert(0, str(src_dir))
 sys.path.insert(0, str(current_dir))
 
 # Import and run the DearPyGui interface
-from src.bot_gui import main
+from src.ui.bot_gui import main
 
 if __name__ == "__main__":
     main()

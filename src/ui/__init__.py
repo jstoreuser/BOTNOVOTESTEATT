@@ -2,10 +2,9 @@
 🎨 UI Module
 
 Módulo responsável pela interface gráfica do bot.
-Contém GUIs, dashboards e interfaces de usuário.
+Contém a GUI moderna com DearPyGui.
 """
 
-from .gui import BotGUI
-from .simple_gui import SimpleBotGUI
+from .bot_gui import BotGUI
 
-__all__ = ['BotGUI', 'SimpleBotGUI']
+__all__ = ['BotGUI']

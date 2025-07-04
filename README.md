@@ -53,17 +53,17 @@ python scripts/tests/test_unified_system.py
 ### 📦 **Estrutura Organizada:**
 ```
 📦 BOTNOVOTESTATT/
-├── 🚀 launcher.py              # Menu principal
-├── 🎮 run_gui.py               # ⭐ Nova Interface DearPyGui
+├── 🎮 run_gui.py               # ⭐ Entry Point GUI
 ├── 📚 botlib.py                # Biblioteca de imports simplificados
+├── 🌐 browser_launcher.py      # Lançador de navegador
 ├── 📁 src/                     # Código fonte modular
-│   ├── 🎮 bot_gui.py           # ⭐ Interface Gráfica Moderna
 │   ├── 🤖 bot_runner.py        # ⭐ Lógica Principal do Bot
-│   ├── 🚀 main.py              # ⭐ Entry Point Limpo
+│   ├── 🚀 main.py              # ⭐ Entry Point Console
 │   ├── 🚀 automation/          # Automação web (Playwright)
 │   ├── 🎮 systems/             # Sistemas de gameplay
 │   ├── ⚙️ config/              # Configurações e contexto
-│   ├── 🎨 ui/                  # Interface gráfica (Legacy)
+│   ├── 🎨 ui/                  # Interface gráfica
+│   │   └── 🎮 bot_gui.py       # ⭐ Interface DearPyGui Moderna
 │   ├── 🧠 ai/                  # IA (preparado para expansão)
 │   ├── 🚗 driver/              # Drivers (preparado)
 │   └── 🛠️ utils/               # Utilitários (preparado)
@@ -91,9 +91,7 @@ python scripts/tests/test_unified_system.py
 - `context.py` - Gerenciamento de contexto e configurações
 
 #### 🎨 **ui/** - User Interface
-- `bot_gui.py` - ⭐ **Modern DearPyGui Interface** (New!)
-- `gui.py` - Interface principal DearPyGUI (Legacy)
-- `simple_gui.py` - Interface simplificada (Legacy)
+- `bot_gui.py` - ⭐ **Modern DearPyGui Interface**
 
 ---
 
