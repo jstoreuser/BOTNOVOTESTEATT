@@ -1,4 +1,28 @@
-# 🤖 SimpleMMO Bot - Modern Unified Automation
+# 🤖 SimpleMMO Bot -### 🎮 **Interface Gráfica Moderna (Padrão)**
+```bash
+python src/main.py
+```
+- ✨ **CustomTkinter** - Interface ultra-moderna
+- 🎨 **Dark/Light Mode** automático
+- ⚙️ **Real-time configuration** (enable/disable combat, gathering)
+- 📊 **Tabbed interface** com Statistics, Logs, Control
+- 🎛️ **Modern switches** e botões estilizados
+- 🌐 **Browser launcher** integrado
+
+### 🎮 **Interface DearPyGui (Alternativa)**
+```bash
+python run_gui.py
+```
+
+### 🤖 **Modo Console**
+```bash
+python src/main_console.py
+```
+
+### 🎭 **Demo da GUI Moderna**
+```bash
+python demo_modern_gui.py
+```tomation
 
 **Bot moderno para SimpleMMO usando Playwright com sistema unificado step-based!**
 

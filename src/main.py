@@ -16,10 +16,23 @@ sys.path.insert(0, str(project_root))
 
 # Import GUI
 try:
-    from ui.bot_gui import main as gui_main
+    from src.ui.modern_bot_gui import main as gui_main
 except ImportError as e:
-    print(f"❌ Failed to import GUI: {e}")
-    sys.exit(1)
+    try:
+        # Try alternative import path
+        import sys
+
+        sys.path.append(str(Path(__file__).parent.parent))
+        from src.ui.modern_bot_gui import main as gui_main
+    except ImportError as e2:
+        print(f"❌ Failed to import Modern GUI: {e}")
+        print(f"❌ Alternative import also failed: {e2}")
+        print("💡 Trying fallback to old GUI...")
+        try:
+            from src.ui.bot_gui import main as gui_main
+        except ImportError as e3:
+            print(f"❌ All GUI imports failed: {e3}")
+            sys.exit(1)
 
 
 def main():
