@@ -1,0 +1,69 @@
+{
+    "recommendations": [
+        // ==========================================
+        // PYTHON CORE (ESSENCIAL)
+        // ==========================================
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        // ==========================================
+        // MODERN DEVELOPMENT STACK
+        // ==========================================
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        // ==========================================
+        // PLAYWRIGHT & WEB AUTOMATION
+        // ==========================================
+        "ms-playwright.playwright",
+        // ==========================================
+        // AI & COLLABORATION
+        // ==========================================
+        "github.copilot",
+        "github.copilot-chat",
+        "visualstudioexptteam.vscodeintellicode",
+        // ==========================================
+        // TESTING & QUALITY
+        // ==========================================
+        "littlefoxteam.vscode-python-test-adapter",
+        "sonarsource.sonarlint-vscode",
+        // ==========================================
+        // VERSION CONTROL & COLLABORATION
+        // ==========================================
+        "eamodio.gitlens",
+        "github.vscode-pull-request-github",
+        // ==========================================
+        // PRODUCTIVITY & CODE QUALITY
+        // ==========================================
+        "njpwerner.autodocstring",
+        "kevinrose.vsc-python-indent",
+        "sourcery.sourcery",
+        "ms-vscode.todo-highlight",
+        // ==========================================
+        // DEBUGGING & DEVELOPMENT
+        // ==========================================
+        "ms-vscode.live-server",
+        "antfu.browse-lite",
+        // ==========================================
+        // OPTIONAL: DATA SCIENCE & NOTEBOOKS
+        // ==========================================
+        "ms-toolsai.jupyter"
+    ],
+    "unwantedRecommendations": [
+        // Old Python tools (replaced by Ruff)
+        "ms-python.flake8",
+        "ms-python.isort",
+        "ms-python.black-formatter",
+        "ms-python.autopep8",
+        "ms-python.pylint",
+        // Old testing tools
+        "formulahendry.code-runner",
+        // Unnecessary Jupyter extensions
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-toolsai.vscode-jupyter-slideshow",
+        "jithurjacob.nbpreviewer",
+        // Outdated tools
+        "visualstudioexptteam.intellicode-api-usage-examples"
+    ]
+}

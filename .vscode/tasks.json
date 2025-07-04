@@ -1,0 +1,292 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "🚀 Run Bot",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "src/main.py"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "default"
+            }
+        },
+        {
+            "label": "📦 Setup Environment",
+            "type": "shell",
+            "command": "cmd",
+            "args": [
+                "/c",
+                "python -m venv venv && venv\\Scripts\\activate && pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && pip install -r requirements-dev.txt && playwright install && pre-commit install && echo ✅ Environment ready for AI-Human collaboration!"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "📥 Install Dependencies",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                "requirements.txt"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🔧 Install Dev Dependencies",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                "requirements-dev.txt"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🎨 Format Code (Ruff)",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "ruff",
+                "format",
+                "."
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🔍 Lint & Fix (Ruff)",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "ruff",
+                "check",
+                ".",
+                "--fix"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                {
+                    "owner": "ruff",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}"
+                    ],
+                    "pattern": {
+                        "regexp": "^(.+?):(\\d+):(\\d+):\\s+(\\w+)\\s+(.+)$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "severity": 4,
+                        "message": 5
+                    }
+                }
+            ]
+        },
+        {
+            "label": "🔎 Type Check (MyPy)",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "mypy",
+                "src",
+                "--config-file",
+                "pyproject.toml"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": [
+                {
+                    "owner": "mypy",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}"
+                    ],
+                    "pattern": {
+                        "regexp": "^(.+?):(\\d+):(\\d+):\\s+(error|warning|note):\\s+(.+)$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "severity": 4,
+                        "message": 5
+                    }
+                }
+            ]
+        },
+        {
+            "label": "🧪 Run Tests",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "pytest",
+                "-v",
+                "--tb=short"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "📊 Tests with Coverage",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "pytest",
+                "--cov=src",
+                "--cov-report=html",
+                "--cov-report=term-missing",
+                "--cov-report=json"
+            ],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🎭 Install Playwright Browsers",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "playwright",
+                "install"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🧹 Clean Cache & Build",
+            "type": "shell",
+            "command": "cmd",
+            "args": [
+                "/c",
+                "rmdir /s /q __pycache__ 2>nul & rmdir /s /q .mypy_cache 2>nul & rmdir /s /q .ruff_cache 2>nul & rmdir /s /q .pytest_cache 2>nul & rmdir /s /q htmlcov 2>nul & rmdir /s /q build 2>nul & rmdir /s /q dist 2>nul & del /q *.pyc 2>nul & del /q coverage.json 2>nul & echo ✅ Cache cleaned!"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🔄 Reset Environment",
+            "type": "shell",
+            "command": "cmd",
+            "args": [
+                "/c",
+                "rmdir /s /q venv 2>nul & python -m venv venv & echo ✅ Virtual environment recreated! Run 'Setup Environment' next."
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🤖 AI Code Analysis",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-m",
+                "ruff",
+                "check",
+                ".",
+                "--output-format=json",
+                "&&",
+                "echo",
+                "✅ Analysis complete! Check output for AI-readable format."
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

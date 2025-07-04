@@ -1,0 +1,161 @@
+# ==========================================
+# PYTHON
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ==========================================
+# VIRTUAL ENVIRONMENTS
+# ==========================================
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# ==========================================
+# TESTING & COVERAGE
+# ==========================================
+.coverage
+.pytest_cache/
+.cache
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+coverage.json
+*.cover
+*.py,cover
+.hypothesis/
+
+# ==========================================
+# LINTING & TYPE CHECKING
+# ==========================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# ==========================================
+# IDEs & EDITORS
+# ==========================================
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ==========================================
+# PLAYWRIGHT & BROWSERS
+# ==========================================
+playwright-browsers/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ==========================================
+# LOGS & DEBUG
+# ==========================================
+*.log
+logs/
+debug.log
+*.debug
+
+# ==========================================
+# CONFIGURATION & SECRETS
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+config.local.json
+secrets.json
+
+# ==========================================
+# DATA & TEMP FILES
+# ==========================================
+*.tmp
+*.temp
+temp/
+tmp/
+data/
+downloads/
+screenshots/
+traces/
+
+# ==========================================
+# OPERATING SYSTEM
+# ==========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ==========================================
+# AI & ML ARTIFACTS
+# ==========================================
+*.pkl
+*.pickle
+*.model
+*.weights
+*.h5
+models/
+
+# ==========================================
+# PROJECT SPECIFIC
+# ==========================================
+chromedriver.exe
+geckodriver.exe
+user_data/
+browser_data/
+captcha_solutions/
+game_data/
+
+# ==========================================
+# DOCUMENTATION BUILDS
+# ==========================================
+docs/_build/
+site/
+
+# ==========================================
+# JUPYTER
+# ==========================================
+.ipynb_checkpoints
+
+# ==========================================
+# PACKAGE MANAGEMENT
+# ==========================================
+pip-log.txt
+pip-delete-this-directory.txt

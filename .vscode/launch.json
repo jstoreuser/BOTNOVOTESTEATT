@@ -1,0 +1,81 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🚀 Debug Bot",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PLAYWRIGHT_BROWSERS_PATH": "${workspaceFolder}/playwright-browsers"
+            },
+            "stopOnEntry": false
+        },
+        {
+            "name": "🎭 Debug with Playwright Tracing",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "PLAYWRIGHT_BROWSERS_PATH": "${workspaceFolder}/playwright-browsers",
+                "DEBUG": "pw:*",
+                "PWDEBUG": "1"
+            },
+            "stopOnEntry": false
+        },
+        {
+            "name": "🧪 Debug Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${workspaceFolder}/tests",
+                "-v",
+                "--tb=long",
+                "-s"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "🔍 Debug Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "🤖 AI-Assisted Debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "AI_DEBUG_MODE": "true",
+                "VERBOSE_LOGGING": "true"
+            },
+            "stopOnEntry": false,
+            "logToFile": true
+        }
+    ]
+}

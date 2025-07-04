@@ -1,0 +1,256 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "botnovotesteatt"
+version = "5.0.0"
+description = "Modern SimpleMMO automation bot with Playwright and DearPyGUI - AI-Human Collaboration Ready"
+authors = [
+    {name = "AI-Human Team", email = "team@botnovotesteatt.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    # === AUTOMAÇÃO WEB MODERNA ===
+    "playwright==1.53.0",
+    "undetected-chromedriver==3.5.5",
+
+    # === INTERFACE MODERNA ===
+    "dearpygui==2.0.0",
+    "rich==14.0.0",
+    "loguru==0.7.2",
+
+    # === VISÃO COMPUTACIONAL & CAPTCHA ===
+    "opencv-python==4.11.0.86",
+    "pytesseract==0.3.13",
+    "Pillow==11.0.0",
+    "scikit-image==0.24.0",
+
+    # === CORE LIBRARIES ===
+    "numpy==2.2.6",
+    "scikit-learn==1.5.2",
+    "requests==2.32.3",
+    "python-dotenv==1.1.0",
+
+    # === DADOS E CONFIGURAÇÃO ===
+    "pydantic==2.9.2",
+    "pydantic-settings==2.8.1",
+    "PyYAML==6.0.2",
+
+    # === CLI & CONFIGURAÇÃO ===
+    "typer[rich]==0.15.3",
+    "click==8.1.8",    # === NOTIFICAÇÕES MODERNAS ===
+    "aiohttp==3.11.10",
+    "plyer==2.1.0",
+
+    # === MONITORAMENTO E ANALYTICS ===
+    "psutil==6.1.0",
+
+    # === AI CAPTCHA (Future - Optional Dependencies) ===
+    # "tensorflow-cpu==2.18.0",  # Uncomment when implementing AI captcha
+    # "torch==2.5.1",           # Uncomment when implementing AI captcha
+    # "transformers==4.48.2",   # Uncomment when implementing AI captcha
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.optional-dependencies]
+dev = [
+    # === DESENVOLVIMENTO & QUALIDADE ===
+    "ruff==0.12.1",
+    "mypy==1.16.1",
+    "pre-commit==4.2.0",
+
+    # === TESTES ===
+    "pytest==8.3.3",
+    "pytest-cov==6.2.1",
+
+    # === TIPAGEM (Type Hints) ===
+    "types-requests==2.32.4.20250611",
+    "types-PyYAML==6.0.12.20250516",
+
+    # === DEBUGGING & SEGURANÇA ===
+    "ipdb==0.13.13",
+    "bandit==1.8.5",
+
+    # === BUILD & DEPENDÊNCIA ===
+    "build==1.2.2",
+    "pip-tools==7.4.1",
+]
+
+[project.scripts]
+bot = "src.main:sync_main"
+botnovotesteatt = "src.main:sync_main"
+
+[project.urls]
+Homepage = "https://github.com/jstoreuser/BOTNOVOTESTEATT"
+Repository = "https://github.com/jstoreuser/BOTNOVOTESTEATT"
+Issues = "https://github.com/jstoreuser/BOTNOVOTESTEATT/issues"
+
+# ==========================================
+# RUFF CONFIGURATION (Modern Linting - AI Optimized)
+# ==========================================
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "RUF",  # Ruff-specific rules
+    "PL",   # pylint
+    "SIM",  # flake8-simplify
+    "TCH",  # flake8-type-checking
+    "PTH",  # flake8-use-pathlib
+    "TRY",  # tryceratops
+    "FBT",  # flake8-boolean-trap
+]
+ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "B008",   # Do not perform function calls in argument defaults
+    "B904",   # Allow `raise` without `from` inside `except`
+    "PLR0913", # Too many arguments
+    "PLR0911", # Too many return statements
+    "PLR0915", # Too many statements
+    "TRY003", # Avoid specifying long messages outside the exception class
+    "FBT001", # Boolean positional arg in function definition
+    "FBT002", # Boolean default positional argument in function definition
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "PLR2004",  # Magic value used in comparison
+    "S101",     # Use of assert detected
+    "TRY301",   # Abstract `raise` to an inner function
+]
+"src/main.py" = [
+    "T201",     # `print` found (allowed in main)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+
+# ==========================================
+# MYPY CONFIGURATION (AI-Friendly Type Checking)
+# ==========================================
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+show_column_numbers = true
+show_error_context = true
+pretty = true
+
+# AI-friendly: More detailed error messages
+show_traceback = true
+
+[[tool.mypy.overrides]]
+module = [
+    "dearpygui.*",
+    "cv2.*",
+    "pytesseract.*",
+    "undetected_chromedriver.*",
+    "playwright.*",
+]
+ignore_missing_imports = true
+
+# ==========================================
+# PYTEST CONFIGURATION (AI-Optimized Testing)
+# ==========================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=json:coverage.json",  # AI can read JSON reports
+    "--cov-fail-under=80",
+    "--durations=10",  # Show slowest 10 tests
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "gui: marks tests that require GUI",
+    "playwright: marks tests that use Playwright",
+    "ai_test: marks tests designed for AI analysis",
+]
+
+# ==========================================
+# COVERAGE CONFIGURATION (AI-Readable)
+# ==========================================
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+    "*/build/*",
+    "*/dist/*",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "# AI_IGNORE",  # Special marker for AI to ignore
+]
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.json]
+output = "coverage.json"
+pretty_print = true
