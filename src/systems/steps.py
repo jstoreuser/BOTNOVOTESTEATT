@@ -175,7 +175,9 @@ class StepSystem:
             return elapsed
         return last_log_time
 
-    async def _handle_missing_button_wait(self, start_time: float, last_log_time: float, timeout: float) -> tuple[bool, float]:
+    async def _handle_missing_button_wait(
+        self, start_time: float, last_log_time: float, timeout: float
+    ) -> tuple[bool, float]:
         """Handle waiting when button is missing
 
         Returns:
@@ -213,22 +215,29 @@ class StepSystem:
             return False
 
         try:
-            logger.debug("⏳ Waiting for step button to become available (will wait indefinitely while disabled)...")
+            logger.debug(
+                "⏳ Waiting for step button to become available (will wait indefinitely while disabled)..."
+            )
 
             start_time = asyncio.get_event_loop().time()
             last_log_time = 0  # Track when we last logged to reduce spam
 
             while True:
-                button_found, is_fully_available, is_disabled_by_styling = await self._check_button_availability()
+                (
+                    button_found,
+                    is_fully_available,
+                    is_disabled_by_styling,
+                ) = await self._check_button_availability()
 
                 if button_found:
-
                     if is_fully_available:
                         logger.success("✅ Step button is available and enabled!")
                         return True
                     elif is_disabled_by_styling:
                         # Button exists but is disabled - wait indefinitely (reduced logging)
-                        last_log_time = await self._handle_disabled_button_wait(start_time, last_log_time)
+                        last_log_time = await self._handle_disabled_button_wait(
+                            start_time, last_log_time
+                        )
                     # Removed the debug log for "not visible/enabled" to reduce spam
                 else:
                     # Button not found
@@ -245,7 +254,7 @@ class StepSystem:
             logger.error(f"❌ Error waiting for step button: {e}")
             return False
 
-    async def take_step(self, fast_mode: bool = False) -> bool:
+    async def take_step(self, fast_mode: bool = True) -> bool:
         """
         Take a step - Main function with intelligent waiting
 
@@ -253,14 +262,14 @@ class StepSystem:
         logic to handle temporarily disabled buttons.
 
         Args:
-            fast_mode: If True, use minimal delays (for rapid navigation)
+            fast_mode: If True, use minimal delays (for rapid automation, default=True)
         """
         if not self.web_engine or not self.web_engine.page:
             logger.warning("👣 Web engine not available for step")
             return False
 
         try:
-            logger.info("👣 Attempting to take step with smart waiting...")
+            logger.debug("👣 Attempting to take step with smart waiting...")
 
             # Quick check first
             if await self.is_step_available():
@@ -270,14 +279,18 @@ class StepSystem:
             # If not available, check if we're on a page that might have steps
             url = self.web_engine.page.url
             if "travel" in url.lower() or "simple-mmo.com" in url:
-                logger.info("⏳ Step not immediately available, waiting for button...")
+                logger.debug("⏳ Step not immediately available, waiting for button...")
 
                 # Wait for step button to become available (indefinitely if disabled)
-                if await self.wait_for_step_button(timeout=60.0):  # 60s timeout only for missing buttons
+                if await self.wait_for_step_button(
+                    timeout=60.0
+                ):  # 60s timeout only for missing buttons
                     logger.success("✅ Step button became available!")
                     return await self._take_step_internal(fast_mode)
                 else:
-                    logger.warning("⏰ Step button not found after extensive wait, may need to navigate")
+                    logger.warning(
+                        "⏰ Step button not found after extensive wait, may need to navigate"
+                    )
                     return False
             else:
                 logger.debug("📍 Not on a game page, step not expected")
@@ -382,7 +395,9 @@ class StepSystem:
                             except Exception:
                                 text = "N/A"
 
-                            logger.debug(f"👣 Found step element {i+1}: '{text}' using {selector}")
+                            logger.debug(
+                                f"👣 Found step element {i + 1}: '{text}' using {selector}"
+                            )
 
                             # Human-like delay
                             delay = random.uniform(self.step_delay_min, self.step_delay_max)
@@ -429,7 +444,7 @@ class StepSystem:
                         text = "N/A"
 
                     logger.debug(
-                        f"👣 Element {i+1}: '{text}' (visible: {is_visible}, enabled: {is_enabled})"
+                        f"👣 Element {i + 1}: '{text}' (visible: {is_visible}, enabled: {is_enabled})"
                     )
 
                     if is_visible and is_enabled:
@@ -442,10 +457,10 @@ class StepSystem:
                         logger.info("👣 Step taken using original-style detection")
                         return True
                     else:
-                        logger.debug(f"👣 Element {i+1} not available for click")
+                        logger.debug(f"👣 Element {i + 1} not available for click")
 
                 except Exception as e:
-                    logger.debug(f"Error checking element {i+1}: {e}")
+                    logger.debug(f"Error checking element {i + 1}: {e}")
                     continue
 
             return False
@@ -461,10 +476,13 @@ class StepSystem:
 
             logger.success("👣 Step completed successfully")
 
-            # Post-step delay (unless in fast mode)
+            # Post-step delay (reduced for automation efficiency)
             if not fast_mode:
-                post_delay = random.uniform(0.5, 1.5)
+                post_delay = random.uniform(0.3, 0.8)  # Reduced from 0.5-1.5s
                 await asyncio.sleep(post_delay)
+            else:
+                # Minimal delay in fast mode for automation
+                await asyncio.sleep(0.1)
 
             return True
 

@@ -42,7 +42,7 @@ class CombatSystem:
             "battles_won": 0,
             "battles_lost": 0,
             "total_attacks": 0,
-            "enemies_defeated": 0
+            "enemies_defeated": 0,
         }
         logger.info("⚔️ Combat System created")
 
@@ -222,41 +222,50 @@ class CombatSystem:
                 attack_count += 1
                 logger.info(f"⚔️ Attack {attack_count}...")
 
+                # Perform the attack
                 if await self._perform_single_attack(page):
                     self.combat_stats["total_attacks"] += 1
+                    logger.debug(f"✅ Attack {attack_count} completed")
 
-                    # Get updated HP first
-                    enemy_hp = await self._get_enemy_hp_percentage(page)
-                    logger.debug(f"🎯 Enemy HP after attack: {enemy_hp}%")
+                    # Wait a moment for the game to update
+                    await asyncio.sleep(0.5)
 
-                    if enemy_hp <= 0:
-                        logger.success("💀 Enemy defeated!")
+                    # Check if Leave button appeared first (combat ended)
+                    if await self._is_leave_button_available(page):
+                        logger.info("🚪 Leave button appeared - combat ended!")
+                        break
+
+                    # Get updated HP
+                    new_enemy_hp = await self._get_enemy_hp_percentage(page)
+                    logger.info(f"🎯 Enemy HP: {new_enemy_hp}%")
+
+                    if new_enemy_hp <= 0:
+                        logger.success("💀 Enemy defeated (HP = 0)!")
                         self.combat_stats["enemies_defeated"] += 1
                         break
 
-                    # Check if Leave button appeared (combat ended)
-                    if await self._is_leave_button_available(page):
-                        logger.info("🚪 Leave button appeared - combat ended")
-                        break
+                    enemy_hp = new_enemy_hp
 
-                    # Check if attack button is still available after some time
-                    await asyncio.sleep(0.5)  # Wait a bit for button to become available again
+                    # Check if attack button is still available
                     if not await self._is_attack_button_available(page):
-                        logger.info("⚔️ Attack button no longer available after wait")
+                        logger.info("⚔️ Attack button no longer available")
                         # Double check if Leave button is available
                         if await self._is_leave_button_available(page):
-                            logger.info("� Leave button confirmed - combat ended")
+                            logger.info("🚪 Leave button confirmed - combat ended")
                             break
                         else:
-                            logger.warning("⚠️ No attack or leave button - something went wrong")
+                            logger.warning("⚠️ No attack or leave button - combat may have ended")
                             break
 
-                    # Wait between attacks
+                    # Wait between attacks only if enemy is still alive
                     if enemy_hp > 0:
-                        logger.debug(f"✅ Attack {attack_count} completed, waiting {self.attack_delay}s...")
                         await asyncio.sleep(self.attack_delay)
                 else:
-                    logger.warning(f"Failed to perform attack {attack_count}")
+                    logger.warning(f"❌ Failed to perform attack {attack_count}")
+                    # Check if combat ended despite attack failure
+                    if await self._is_leave_button_available(page):
+                        logger.info("🚪 Leave button found despite attack failure - combat ended")
+                        break
                     break
 
             # Step 5: Leave combat page
@@ -312,14 +321,15 @@ class CombatSystem:
     async def _get_enemy_hp_percentage(self, page) -> float:
         """Get enemy HP percentage from combat page."""
         try:
-            # Look for the HP bar element
-            selectors = [
+            # Primary method: Look for enemy HP bar with specific selector
+            # Based on: <div x-text="format_number(enemy.current_hp)" :style="'width:'+enemy.hp_percentage+'%'" ...>276</div>
+            enemy_hp_selectors = [
+                # Most specific selector for enemy HP element
+                'div[x-text="format_number(enemy.current_hp)"]',
                 '//div[@x-text="format_number(enemy.current_hp)"]',
-                '//div[contains(@class, "from-red-500") and contains(@class, "to-red-400")]',
-                'div[x-text*="enemy.current_hp"]',
             ]
 
-            for selector in selectors:
+            for selector in enemy_hp_selectors:
                 try:
                     if selector.startswith("//"):
                         element = await page.query_selector(f"xpath={selector}")
@@ -327,19 +337,72 @@ class CombatSystem:
                         element = await page.query_selector(selector)
 
                     if element:
-                        # Get the width style to determine HP percentage
+                        # Get HP percentage from style width
                         style = await element.get_attribute("style")
                         if style and "width:" in style:
-                            # Extract width percentage from style
+                            # Extract width percentage from style like "width:13%"
                             width_part = style.split("width:")[1].split(";")[0].strip()
                             if "%" in width_part:
                                 percentage = float(width_part.replace("%", ""))
+
+                                # Get the actual HP number from text content for validation
+                                text_content = await element.text_content()
+                                if text_content and text_content.strip():
+                                    current_hp = text_content.strip()
+                                    logger.debug(f"💀 Enemy HP: {current_hp} ({percentage:.1f}%)")
+                                else:
+                                    logger.debug(f"💀 Enemy HP: {percentage:.1f}%")
+
                                 return percentage
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Enemy HP selector {selector} failed: {e}")
                     continue
 
+            # Fallback method: Look for red HP bars (but be careful about player vs enemy)
+            fallback_selectors = [
+                '//div[contains(@class, "from-red-500") and contains(@class, "to-red-400") and contains(@style, "width")]',
+                'div[class*="from-red-500"][class*="to-red-400"][style*="width"]',
+            ]
+
+            for selector in fallback_selectors:
+                try:
+                    if selector.startswith("//"):
+                        elements = await page.query_selector_all(f"xpath={selector}")
+                    else:
+                        elements = await page.query_selector_all(selector)
+
+                    # If there are multiple red bars, try to find the enemy one
+                    for i, element in enumerate(elements):
+                        if element:
+                            style = await element.get_attribute("style")
+                            if style and "width:" in style:
+                                width_part = style.split("width:")[1].split(";")[0].strip()
+                                if "%" in width_part:
+                                    percentage = float(width_part.replace("%", ""))
+
+                                    # Try to identify if this is enemy HP by checking surrounding context
+                                    text_content = await element.text_content()
+                                    if text_content:
+                                        logger.debug(f"💀 HP bar #{i} content: {text_content} ({percentage:.1f}%)")
+
+                                        # If this is a lower percentage, it's more likely the enemy
+                                        if percentage < 100:
+                                            logger.debug(f"� Enemy HP (fallback): {percentage:.1f}%")
+                                            return percentage
+
+                except Exception as e:
+                    logger.debug(f"Fallback HP selector {selector} failed: {e}")
+                    continue
+
+            # If we can't find HP, check if Leave button is available (combat ended)
+            if await self._is_leave_button_available(page):
+                logger.debug("🚪 Leave button available - assuming enemy defeated")
+                return 0.0
+
+            logger.debug("❓ Could not determine enemy HP, assuming full health")
             return 100.0  # Default to full HP if can't determine
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Error getting enemy HP: {e}")
             return 100.0
 
     async def _perform_single_attack(self, page) -> bool:
@@ -496,7 +559,10 @@ class CombatSystem:
                             logger.success(f"✅ Found leave button on attempt {attempt + 1}!")
                             await element.click()
                             logger.success("🚪 Clicked leave button successfully")
-                            await asyncio.sleep(0.3)  # Short wait for navigation
+                            await asyncio.sleep(1.0)  # Wait for potential navigation
+
+                            # ✅ CRITICAL FIX: Ensure we return to travel page
+                            await self._ensure_back_to_travel(page)
                             return True
                     except Exception:
                         continue
@@ -507,15 +573,65 @@ class CombatSystem:
                         logger.debug("🚪 Leave button not immediately available, monitoring...")
                     elif attempt % 5 == 0:  # Log every 5 attempts
                         elapsed_time = attempt * 0.1
-                        logger.debug(f"⏳ Leave button search - {elapsed_time:.1f}s elapsed, attempt {attempt + 1}/{max_attempts}")
+                        logger.debug(
+                            f"⏳ Leave button search - {elapsed_time:.1f}s elapsed, attempt {attempt + 1}/{max_attempts}"
+                        )
 
                     await asyncio.sleep(0.1)  # Very fast polling - 10 checks per second
 
-            logger.warning(f"⚠️ Leave button not found after {max_attempts * 0.1:.1f}s ({max_attempts} attempts)")
+            logger.warning(
+                f"⚠️ Leave button not found after {max_attempts * 0.1:.1f}s ({max_attempts} attempts)"
+            )
+
+            # ✅ CRITICAL FIX: Even if leave button not found, ensure we return to travel
+            await self._ensure_back_to_travel(page)
             return False
 
         except Exception as e:
             logger.error(f"❌ Error leaving combat: {e}")
+            # ✅ CRITICAL FIX: Even on error, ensure we return to travel
+            await self._ensure_back_to_travel(page)
+            return False
+
+    async def _ensure_back_to_travel(self, page) -> bool:
+        """Ensure we're back on the travel page after combat."""
+        try:
+            # Check if we're already on travel page
+            current_url = page.url
+            if "/travel" in current_url and "/npcs/attack/" not in current_url:
+                logger.debug("✅ Already on travel page")
+                return True
+
+            # If we're still on combat page, try to navigate back
+            if "/npcs/attack/" in current_url:
+                logger.debug("🔄 Still on combat page, trying to navigate back...")
+
+                # Method 1: Try browser back button
+                try:
+                    await page.go_back()
+                    await page.wait_for_load_state("domcontentloaded", timeout=3000)
+                    if "/travel" in page.url:
+                        logger.success("✅ Navigated back to travel page")
+                        return True
+                except Exception:
+                    pass
+
+                # Method 2: Navigate directly to travel page
+                try:
+                    travel_url = current_url.split("/npcs/attack/")[0] + "/travel"
+                    await page.goto(travel_url)
+                    await page.wait_for_load_state("domcontentloaded", timeout=5000)
+                    if "/travel" in page.url:
+                        logger.success("✅ Navigated directly to travel page")
+                        return True
+                except Exception:
+                    pass
+
+            logger.warning("⚠️ Could not ensure return to travel page")
+            return False
+
+        except Exception as e:
+            logger.error(f"❌ Error ensuring back to travel: {e}")
             return False
 
     async def get_combat_info(self) -> dict[str, Any]:

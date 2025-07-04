@@ -47,7 +47,24 @@ class CaptchaSystem:
             return False
 
     async def is_captcha_present(self) -> bool:
-        """Check if captcha button is present on current page"""
+        """Check if any type of captcha is present on current page"""
+        try:
+            # Check for regular travel page captcha
+            if await self._is_travel_captcha_present():
+                return True
+
+            # Check for combat page captcha
+            if await self._is_combat_captcha_present():
+                return True
+
+            return False
+
+        except Exception as e:
+            logger.debug(f"Error checking captcha: {e}")
+            return False
+
+    async def _is_travel_captcha_present(self) -> bool:
+        """Check if travel page captcha button is present"""
         try:
             engine = await get_web_engine()
             page = await engine.get_page()
@@ -55,7 +72,7 @@ class CaptchaSystem:
             if not page:
                 return False
 
-            # Look for the specific captcha button
+            # Look for the regular travel captcha button
             captcha_selectors = [
                 'a[href="/i-am-not-a-bot?new_page=true"]',
                 'a:has-text("I\'m a person! Promise!")',
@@ -66,23 +83,223 @@ class CaptchaSystem:
             for selector in captcha_selectors:
                 try:
                     if selector.startswith("//"):
-                        # XPath selector
                         element = await page.query_selector(f"xpath={selector}")
                     else:
-                        # CSS selector
                         element = await page.query_selector(selector)
 
                     if element and await element.is_visible():
-                        logger.debug(f"🔒 Captcha button found using selector: {selector}")
+                        logger.debug(f"🔒 Travel captcha button found using selector: {selector}")
                         return True
                 except Exception as e:
-                    logger.debug(f"Captcha selector {selector} failed: {e}")
+                    logger.debug(f"Travel captcha selector {selector} failed: {e}")
                     continue
 
             return False
 
         except Exception as e:
-            logger.debug(f"Error checking captcha: {e}")
+            logger.debug(f"Error checking travel captcha: {e}")
+            return False
+
+    async def _is_combat_captcha_present(self) -> bool:
+        """Check if combat page captcha popup is present"""
+        try:
+            engine = await get_web_engine()
+            page = await engine.get_page()
+
+            if not page:
+                return False
+
+            # Look for the combat captcha popup button
+            combat_captcha_selectors = [
+                'a[href="/i-am-not-a-bot"][class*="btn-primary"]',
+                'a:has-text("Press here to verify")',
+                '//a[contains(text(), "Press here to verify")]',
+                '//a[@href="/i-am-not-a-bot" and contains(@class, "btn-primary")]',
+                'a[href="/i-am-not-a-bot"][target="_blank"]',
+            ]
+
+            for selector in combat_captcha_selectors:
+                try:
+                    if selector.startswith("//"):
+                        element = await page.query_selector(f"xpath={selector}")
+                    else:
+                        element = await page.query_selector(selector)
+
+                    if element and await element.is_visible():
+                        logger.debug(f"🔒 Combat captcha popup found using selector: {selector}")
+                        return True
+                except Exception as e:
+                    logger.debug(f"Combat captcha selector {selector} failed: {e}")
+                    continue
+
+            return False
+
+        except Exception as e:
+            logger.debug(f"Error checking combat captcha: {e}")
+            return False
+
+    async def solve_captcha(self) -> bool:
+        """Solve any type of captcha that is present"""
+        try:
+            # Determine captcha type and handle accordingly
+            if await self._is_combat_captcha_present():
+                logger.info("🔒 Combat captcha detected - using combat resolution flow")
+                return await self._solve_combat_captcha()
+            elif await self._is_travel_captcha_present():
+                logger.info("🔒 Travel captcha detected - using travel resolution flow")
+                return await self._solve_travel_captcha()
+            else:
+                logger.debug("🔒 No captcha detected")
+                return True
+
+        except Exception as e:
+            logger.error(f"❌ Error in solve_captcha: {e}")
+            return False
+
+    async def _solve_travel_captcha(self) -> bool:
+        """Solve the regular travel page captcha"""
+        return await self.wait_for_resolution()
+
+    async def _solve_combat_captcha(self) -> bool:
+        """
+        Solve the combat captcha popup by navigating to travel page.
+        This converts the complex combat captcha to a simple travel captcha.
+        """
+        logger.warning("🔒 COMBAT CAPTCHA DETECTED! Navigating to travel page to simplify...")
+
+        # Import StepSystem dynamically to avoid circular imports
+        try:
+            from systems.steps import StepSystem
+        except ImportError:
+            try:
+                from src.systems.steps import StepSystem
+            except ImportError:
+                logger.error("❌ Could not import StepSystem for navigation")
+                return False
+
+        # Create a temporary StepSystem instance to use navigation
+        temp_steps = StepSystem(self.config)
+        await temp_steps.initialize()
+
+        # Navigate to travel page
+        navigation_success = await temp_steps.navigate_to_travel()
+
+        if navigation_success:
+            logger.success("✅ Navigated to travel page - captcha should now be in simple format")
+            # Give a moment for the page to load
+            await asyncio.sleep(2)
+
+            # Now check if there's a travel captcha present and solve it
+            if await self._is_travel_captcha_present():
+                logger.info("🔒 Travel captcha detected after navigation - solving...")
+                return await self._solve_travel_captcha()
+            else:
+                logger.success("✅ No captcha detected after navigation - continuing")
+                return True
+        else:
+            logger.error("❌ Failed to navigate to travel page")
+            return False
+
+    async def _click_combat_captcha_button(self) -> bool:
+        """Click the 'Press here to verify' button in combat popup"""
+        try:
+            engine = await get_web_engine()
+            page = await engine.get_page()
+
+            if not page:
+                return False
+
+            # Store reference to main tab
+            self.main_tab = page
+
+            # Find and click the combat captcha button
+            combat_captcha_selectors = [
+                'a[href="/i-am-not-a-bot"][target="_blank"]',
+                'a:has-text("Press here to verify")',
+                '//a[contains(text(), "Press here to verify")]',
+                '//a[@href="/i-am-not-a-bot" and contains(@class, "btn-primary")]',
+            ]
+
+            for selector in combat_captcha_selectors:
+                try:
+                    if selector.startswith("//"):
+                        element = await page.query_selector(f"xpath={selector}")
+                    else:
+                        element = await page.query_selector(selector)
+
+                    if element and await element.is_visible():
+                        logger.info("🔒 Clicking combat captcha button...")
+                        await element.click()
+                        await asyncio.sleep(2)  # Wait for new tab to open
+                        return True
+
+                except Exception as e:
+                    logger.debug(f"Failed to click combat captcha with selector {selector}: {e}")
+                    continue
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error clicking combat captcha button: {e}")
+            return False
+
+    async def _close_combat_captcha_popup(self) -> bool:
+        """Close the combat captcha popup by clicking the X button"""
+        try:
+            engine = await get_web_engine()
+            page = await engine.get_page()
+
+            if not page:
+                return False
+
+            # Look for the close button (X) in the popup
+            close_button_selectors = [
+                'path[stroke-linecap="round"][stroke-linejoin="round"][d="M6 18L18 6M6 6l12 12"]',
+                'button[aria-label="Close"]',
+                "button.swal2-close",
+                ".swal2-close",
+                '//button[contains(@aria-label, "Close")]',
+                '//path[@d="M6 18L18 6M6 6l12 12"]/..',  # Parent of the path element
+                '//path[@d="M6 18L18 6M6 6l12 12"]/../..',  # Grandparent of the path element
+            ]
+
+            for selector in close_button_selectors:
+                try:
+                    if selector.startswith("//"):
+                        element = await page.query_selector(f"xpath={selector}")
+                    else:
+                        element = await page.query_selector(selector)
+
+                    if element and await element.is_visible():
+                        logger.info("🔒 Closing combat captcha popup...")
+                        await element.click()
+                        await asyncio.sleep(1)  # Wait for popup to close
+
+                        # Verify popup is closed
+                        if not await self._is_combat_captcha_present():
+                            logger.success("✅ Combat captcha popup closed successfully")
+                            return True
+
+                except Exception as e:
+                    logger.debug(f"Failed to close popup with selector {selector}: {e}")
+                    continue
+
+            # Alternative approach: try ESC key
+            try:
+                logger.debug("🔒 Trying ESC key to close popup...")
+                await page.keyboard.press("Escape")
+                await asyncio.sleep(1)
+
+                if not await self._is_combat_captcha_present():
+                    logger.success("✅ Combat captcha popup closed with ESC key")
+                    return True
+            except Exception as e:
+                logger.debug(f"ESC key approach failed: {e}")
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error closing combat captcha popup: {e}")
             return False
 
     async def wait_for_resolution(self, timeout: int = 600) -> bool:
@@ -228,7 +445,9 @@ class CaptchaSystem:
                     # Log progress every 30 seconds
                     elapsed = asyncio.get_event_loop().time() - start_time
                     if elapsed % 30 < 1:  # Log every 30s
-                        logger.info(f"⏳ Still waiting for captcha resolution... ({elapsed:.0f}s elapsed)")
+                        logger.info(
+                            f"⏳ Still waiting for captcha resolution... ({elapsed:.0f}s elapsed)"
+                        )
 
                 except Exception as e:
                     # If captcha tab is closed or error, check if we're back on main page

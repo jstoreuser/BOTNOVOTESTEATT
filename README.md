@@ -18,6 +18,15 @@ O bot funciona baseado em **turnos de step**, como o jogo:
 
 ## 🚀 INÍCIO RÁPIDO
 
+### 🎮 **Interface Gráfica (DearPyGui)**
+```bash
+python run_gui.py
+```
+- **Start/Pause/Stop** bot controls
+- **Real-time statistics** display
+- **Browser launcher** integration
+- **Modern dark theme** interface
+
 ### 🤖 **Executar Bot Principal**
 ```bash
 python src/main.py
@@ -45,12 +54,16 @@ python scripts/tests/test_unified_system.py
 ```
 📦 BOTNOVOTESTATT/
 ├── 🚀 launcher.py              # Menu principal
+├── 🎮 run_gui.py               # ⭐ Nova Interface DearPyGui
 ├── 📚 botlib.py                # Biblioteca de imports simplificados
 ├── 📁 src/                     # Código fonte modular
+│   ├── 🎮 bot_gui.py           # ⭐ Interface Gráfica Moderna
+│   ├── 🤖 bot_runner.py        # ⭐ Lógica Principal do Bot
+│   ├── 🚀 main.py              # ⭐ Entry Point Limpo
 │   ├── 🚀 automation/          # Automação web (Playwright)
 │   ├── 🎮 systems/             # Sistemas de gameplay
 │   ├── ⚙️ config/              # Configurações e contexto
-│   ├── 🎨 ui/                  # Interface gráfica
+│   ├── 🎨 ui/                  # Interface gráfica (Legacy)
 │   ├── 🧠 ai/                  # IA (preparado para expansão)
 │   ├── 🚗 driver/              # Drivers (preparado)
 │   └── 🛠️ utils/               # Utilitários (preparado)
@@ -78,8 +91,9 @@ python scripts/tests/test_unified_system.py
 - `context.py` - Gerenciamento de contexto e configurações
 
 #### 🎨 **ui/** - User Interface
-- `gui.py` - Interface principal DearPyGUI
-- `simple_gui.py` - Interface simplificada
+- `bot_gui.py` - ⭐ **Modern DearPyGui Interface** (New!)
+- `gui.py` - Interface principal DearPyGUI (Legacy)
+- `simple_gui.py` - Interface simplificada (Legacy)
 
 ---
 

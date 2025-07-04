@@ -4,7 +4,7 @@
         {
             "label": "🚀 Run Bot",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "src/main.py"
             ],
@@ -26,12 +26,33 @@
             }
         },
         {
+            "label": "🎮 Run GUI",
+            "type": "shell",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+            "args": [
+                "run_gui.py"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "default"
+            }
+        },
+        {
             "label": "📦 Setup Environment",
             "type": "shell",
             "command": "cmd",
             "args": [
                 "/c",
-                "python -m venv venv && venv\\Scripts\\activate && pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && pip install -r requirements-dev.txt && playwright install && pre-commit install && echo ✅ Environment ready for AI-Human collaboration!"
+                "python -m venv .venv && .venv\\Scripts\\activate && pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && pip install -r requirements-dev.txt && playwright install && pre-commit install && echo ✅ Environment ready for AI-Human collaboration!"
             ],
             "group": "build",
             "presentation": {
@@ -45,7 +66,7 @@
         {
             "label": "📥 Install Dependencies",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "pip",
@@ -65,7 +86,7 @@
         {
             "label": "🔧 Install Dev Dependencies",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "pip",
@@ -85,7 +106,7 @@
         {
             "label": "🎨 Format Code (Ruff)",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "ruff",
@@ -104,7 +125,7 @@
         {
             "label": "🔍 Lint & Fix (Ruff)",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "ruff",
@@ -140,7 +161,7 @@
         {
             "label": "🔎 Type Check (MyPy)",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "mypy",
@@ -176,7 +197,7 @@
         {
             "label": "🧪 Run Tests",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "pytest",
@@ -195,7 +216,7 @@
         {
             "label": "📊 Tests with Coverage",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "pytest",
@@ -216,7 +237,7 @@
         {
             "label": "🎭 Install Playwright Browsers",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "playwright",
@@ -254,7 +275,7 @@
             "command": "cmd",
             "args": [
                 "/c",
-                "rmdir /s /q venv 2>nul & python -m venv venv & echo ✅ Virtual environment recreated! Run 'Setup Environment' next."
+                "rmdir /s /q .venv 2>nul & python -m venv .venv & echo ✅ Virtual environment recreated! Run 'Setup Environment' next."
             ],
             "group": "build",
             "presentation": {
@@ -268,7 +289,7 @@
         {
             "label": "🤖 AI Code Analysis",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "args": [
                 "-m",
                 "ruff",
