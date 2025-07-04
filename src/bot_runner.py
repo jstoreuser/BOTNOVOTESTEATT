@@ -6,7 +6,7 @@ The main.py file should only be responsible for starting the bot.
 """
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -50,7 +50,7 @@ class BotRunner:
             "combat_wins": 0,
             "gathering_success": 0,
             "captcha_solved": 0,
-            "healing_performed": 0
+            "healing_performed": 0,
         }
 
     async def initialize(self) -> bool:
@@ -60,21 +60,23 @@ class BotRunner:
             if not systems:
                 return False
 
-            self.web_engine, self.gathering, self.healing, self.steps, self.combat, self.captcha = systems
+            self.web_engine, self.gathering, self.healing, self.steps, self.combat, self.captcha = (
+                systems
+            )
             return True
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize bot: {e}")
             return False
 
-    async def run_cycle(self) -> Dict[str, bool]:
+    async def run_cycle(self) -> dict[str, bool]:
         """Run a single bot cycle and return results"""
         if not self.web_engine:
             raise RuntimeError("Bot not initialized")
 
         self.cycles += 1
         self.stats["cycles"] = self.cycles
-        results: Dict[str, bool] = {}
+        results: dict[str, bool] = {}
 
         try:
             # Check for captcha first (highest priority)
@@ -127,7 +129,7 @@ class BotRunner:
             results["error"] = True
             return results
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get current bot statistics"""
         return self.stats.copy()
 
@@ -139,8 +141,9 @@ class BotRunner:
         if not systems:
             raise RuntimeError("Failed to initialize bot systems")
 
-        (self.web_engine, self.gathering, self.healing,
-         self.steps, self.combat, self.captcha) = systems
+        (self.web_engine, self.gathering, self.healing, self.steps, self.combat, self.captcha) = (
+            systems
+        )
 
         logger.success("✅ Bot initialized successfully")
 
@@ -155,6 +158,26 @@ class BotRunner:
     async def shutdown(self):
         """Shutdown bot and cleanup"""
         await self.cleanup()
+
+    def update_config(self, new_config: "BotConfig") -> None:
+        """Update bot configuration and propagate to all systems"""
+        self.config.update(new_config)
+
+        # Update each system's configuration
+        systems = [self.gathering, self.healing, self.steps, self.combat, self.captcha]
+
+        for system in systems:
+            if system and hasattr(system, "config"):
+                system.config.update(new_config)
+                # Update specific auto flags
+                if hasattr(system, "auto_gather"):
+                    system.auto_gather = new_config.get("auto_gather", True)
+                if hasattr(system, "auto_combat"):
+                    system.auto_combat = new_config.get("auto_combat", True)
+                if hasattr(system, "auto_heal"):
+                    system.auto_heal = new_config.get("auto_heal", True)
+
+        logger.info("⚙️ Configuration updated for all systems")
 
 
 async def initialize_systems(config: "BotConfig") -> tuple[Any, ...] | None:

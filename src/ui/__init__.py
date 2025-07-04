@@ -7,4 +7,4 @@ Contém a GUI moderna com DearPyGui.
 
 from .bot_gui import BotGUI
 
-__all__ = ['BotGUI']
+__all__ = ["BotGUI"]

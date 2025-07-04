@@ -18,18 +18,23 @@ O bot funciona baseado em **turnos de step**, como o jogo:
 
 ## 🚀 INÍCIO RÁPIDO
 
-### 🎮 **Interface Gráfica (DearPyGui)**
+### 🎮 **Interface Gráfica (Padrão)**
 ```bash
-python run_gui.py
+python src/main.py
 ```
 - **Start/Pause/Stop** bot controls
-- **Real-time statistics** display
+- **Real-time configuration** (enable/disable combat, gathering)
 - **Browser launcher** integration
 - **Modern dark theme** interface
 
-### 🤖 **Executar Bot Principal**
+### 🎮 **Interface Gráfica (Alternativa)**
 ```bash
-python src/main.py
+python run_gui.py
+```
+
+### 🤖 **Modo Console**
+```bash
+python src/main_console.py
 ```
 
 ### 📋 **Menu de Opções**

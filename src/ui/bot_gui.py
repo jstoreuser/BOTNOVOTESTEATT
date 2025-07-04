@@ -6,18 +6,16 @@ Features Start/Pause/Stop controls, browser launcher, and real-time statistics.
 """
 
 import asyncio
+import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 import dearpygui.dearpygui as dpg
 from loguru import logger
 
 # Import bot components
 from ..bot_runner import BotRunner
-import sys
-from pathlib import Path
 
 # Add project root to path for browser_launcher
 project_root = Path(__file__).parent.parent.parent
@@ -35,9 +33,9 @@ class BotGUI:
 
     def __init__(self):
         """Initialize the GUI controller"""
-        self.bot_runner: Optional[BotRunner] = None
+        self.bot_runner: BotRunner | None = None
         self.browser_launcher = BrowserLauncher()
-        self.bot_thread: Optional[threading.Thread] = None
+        self.bot_thread: threading.Thread | None = None
         self.running = False
         self.paused = False
 
@@ -72,23 +70,50 @@ class BotGUI:
 
     def create_main_window(self):
         """Create the main GUI window"""
-        with dpg.window(label="🤖 SimpleMMO Bot Control Panel", tag="main_window",
-                       width=600, height=400, no_close=True, no_collapse=True):
-
+        with dpg.window(
+            label="🤖 SimpleMMO Bot Control Panel",
+            tag="main_window",
+            width=600,
+            height=400,
+            no_close=True,
+            no_collapse=True,
+        ):
             # Header
             dpg.add_text("🚀 SimpleMMO Bot - Modern GUI Control", color=(100, 200, 255))
             dpg.add_separator()
 
             # Control buttons section
             with dpg.group(horizontal=True):
-                dpg.add_button(label="🚀 Start Bot", callback=self.start_bot,
-                              tag="start_btn", width=120, height=40)
-                dpg.add_button(label="⏸️ Pause Bot", callback=self.pause_bot,
-                              tag="pause_btn", width=120, height=40, enabled=False)
-                dpg.add_button(label="⏹️ Stop Bot", callback=self.stop_bot,
-                              tag="stop_btn", width=120, height=40, enabled=False)
-                dpg.add_button(label="🌐 Open Browser", callback=self.open_browser,
-                              tag="browser_btn", width=120, height=40)
+                dpg.add_button(
+                    label="🚀 Start Bot",
+                    callback=self.start_bot,
+                    tag="start_btn",
+                    width=120,
+                    height=40,
+                )
+                dpg.add_button(
+                    label="⏸️ Pause Bot",
+                    callback=self.pause_bot,
+                    tag="pause_btn",
+                    width=120,
+                    height=40,
+                    enabled=False,
+                )
+                dpg.add_button(
+                    label="⏹️ Stop Bot",
+                    callback=self.stop_bot,
+                    tag="stop_btn",
+                    width=120,
+                    height=40,
+                    enabled=False,
+                )
+                dpg.add_button(
+                    label="🌐 Open Browser",
+                    callback=self.open_browser,
+                    tag="browser_btn",
+                    width=120,
+                    height=40,
+                )
 
             dpg.add_spacing(count=2)
 
@@ -114,23 +139,49 @@ class BotGUI:
             dpg.add_text("⚙️ Configuration", color=(255, 215, 0))
             dpg.add_separator()
 
-            dpg.add_checkbox(label="Auto Healing", tag="auto_heal_cb", default_value=True)
-            dpg.add_checkbox(label="Auto Gathering", tag="auto_gather_cb", default_value=True)
-            dpg.add_checkbox(label="Auto Combat", tag="auto_combat_cb", default_value=True)
-            dpg.add_checkbox(label="Headless Browser", tag="headless_cb", default_value=False)
+            dpg.add_checkbox(
+                label="Auto Healing",
+                tag="auto_heal_cb",
+                default_value=True,
+                callback=self._on_config_change,
+            )
+            dpg.add_checkbox(
+                label="Auto Gathering",
+                tag="auto_gather_cb",
+                default_value=True,
+                callback=self._on_config_change,
+            )
+            dpg.add_checkbox(
+                label="Auto Combat",
+                tag="auto_combat_cb",
+                default_value=True,
+                callback=self._on_config_change,
+            )
+            dpg.add_checkbox(
+                label="Headless Browser",
+                tag="headless_cb",
+                default_value=False,
+                callback=self._on_config_change,
+            )
 
             dpg.add_spacing(count=2)
 
             # Additional windows toggle
             with dpg.group(horizontal=True):
-                dpg.add_button(label="📈 Show Statistics", callback=self.toggle_stats_window,
-                              width=140, height=30)
-                dpg.add_button(label="📝 Show Logs", callback=self.toggle_log_window,
-                              width=140, height=30)
+                dpg.add_button(
+                    label="📈 Show Statistics",
+                    callback=self.toggle_stats_window,
+                    width=140,
+                    height=30,
+                )
+                dpg.add_button(
+                    label="📝 Show Logs", callback=self.toggle_log_window, width=140, height=30
+                )
 
             dpg.add_spacing(count=3)
-            dpg.add_text("💡 Tip: Start the browser first, then start the bot!",
-                        color=(200, 200, 200))
+            dpg.add_text(
+                "💡 Tip: Start the browser first, then start the bot!", color=(200, 200, 200)
+            )
 
         # Create additional windows (hidden by default)
         self.create_stats_window()
@@ -138,9 +189,14 @@ class BotGUI:
 
     def create_stats_window(self):
         """Create the statistics window"""
-        with dpg.window(label="📈 Bot Statistics", tag="stats_window",
-                       width=400, height=300, show=False, pos=(620, 50)):
-
+        with dpg.window(
+            label="📈 Bot Statistics",
+            tag="stats_window",
+            width=400,
+            height=300,
+            show=False,
+            pos=(620, 50),
+        ):
             dpg.add_text("📊 Real-time Statistics", color=(100, 200, 255))
             dpg.add_separator()
 
@@ -163,14 +219,15 @@ class BotGUI:
 
     def create_log_window(self):
         """Create the log window"""
-        with dpg.window(label="📝 Bot Logs", tag="log_window",
-                       width=500, height=400, show=False, pos=(620, 370)):
-
+        with dpg.window(
+            label="📝 Bot Logs", tag="log_window", width=500, height=400, show=False, pos=(620, 370)
+        ):
             dpg.add_text("📝 Recent Bot Activity", color=(100, 200, 255))
             dpg.add_separator()
 
-            dpg.add_input_text(label="", tag="log_display", multiline=True,
-                             readonly=True, height=300, width=460)
+            dpg.add_input_text(
+                label="", tag="log_display", multiline=True, readonly=True, height=300, width=460
+            )
 
             with dpg.group(horizontal=True):
                 dpg.add_button(label="Clear Logs", callback=self.clear_logs, width=100)
@@ -260,7 +317,9 @@ class BotGUI:
         try:
             # Check if Chromium is available
             if not self.browser_launcher.check_chromium_installed():
-                logger.error("❌ Chromium not installed. Run: python -m playwright install chromium")
+                logger.error(
+                    "❌ Chromium not installed. Run: python -m playwright install chromium"
+                )
                 return
 
             # Launch browser
@@ -304,7 +363,7 @@ class BotGUI:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             filename = f"bot_logs_{timestamp}.txt"
 
-            with open(filename, 'w', encoding='utf-8') as f:
+            with open(filename, "w", encoding="utf-8") as f:
                 f.write(logs)
 
             logger.success(f"📄 Logs saved to {filename}")
@@ -386,16 +445,25 @@ class BotGUI:
             # Update statistics window if visible
             if self.stats_window_visible:
                 dpg.set_value("steps_taken_stat", f"Steps Taken: {stats.get('steps_taken', 0)}")
-                dpg.set_value("successful_steps_stat", f"Successful Steps: {stats.get('successful_steps', 0)}")
+                dpg.set_value(
+                    "successful_steps_stat", f"Successful Steps: {stats.get('successful_steps', 0)}"
+                )
                 dpg.set_value("failed_steps_stat", f"Failed Steps: {stats.get('failed_steps', 0)}")
                 dpg.set_value("combat_wins_stat", f"Combat Wins: {stats.get('combat_wins', 0)}")
-                dpg.set_value("gathering_success_stat", f"Gathering Success: {stats.get('gathering_success', 0)}")
-                dpg.set_value("captcha_solved_stat", f"Captchas Solved: {stats.get('captcha_solved', 0)}")
-                dpg.set_value("health_restored_stat", f"Health Restored: {stats.get('health_restored', 0)}")
+                dpg.set_value(
+                    "gathering_success_stat",
+                    f"Gathering Success: {stats.get('gathering_success', 0)}",
+                )
+                dpg.set_value(
+                    "captcha_solved_stat", f"Captchas Solved: {stats.get('captcha_solved', 0)}"
+                )
+                dpg.set_value(
+                    "health_restored_stat", f"Health Restored: {stats.get('health_restored', 0)}"
+                )
 
                 # Calculate success rates
-                steps_taken = stats.get('steps_taken', 0)
-                successful_steps = stats.get('successful_steps', 0)
+                steps_taken = stats.get("steps_taken", 0)
+                successful_steps = stats.get("successful_steps", 0)
                 if steps_taken > 0:
                     success_rate = (successful_steps / steps_taken) * 100
                     dpg.set_value("step_success_rate", f"Step Success Rate: {success_rate:.1f}%")
@@ -419,12 +487,42 @@ class BotGUI:
         dpg.set_value("status_text", status)
         dpg.configure_item("status_text", color=color)
 
+    def _on_config_change(self, sender, app_data, user_data):
+        """Callback for when configuration checkboxes change"""
+        if self.bot_runner and self.running:
+            # Get current configuration values
+            new_config = {
+                "auto_heal": dpg.get_value("auto_heal_cb"),
+                "auto_gather": dpg.get_value("auto_gather_cb"),
+                "auto_combat": dpg.get_value("auto_combat_cb"),
+                "browser_headless": dpg.get_value("headless_cb"),
+            }
+
+            # Update bot configuration in real-time
+            self.bot_runner.update_config(new_config)
+
+            # Show feedback in logs
+            config_name = ""
+            if sender == "auto_heal_cb":
+                config_name = "Auto Healing"
+            elif sender == "auto_gather_cb":
+                config_name = "Auto Gathering"
+            elif sender == "auto_combat_cb":
+                config_name = "Auto Combat"
+            elif sender == "headless_cb":
+                config_name = "Headless Browser"
+
+            status = "enabled" if app_data else "disabled"
+            logger.info(f"⚙️ {config_name} {status}")
+            self._add_log(f"⚙️ {config_name} {status}")
+
     def run(self):
         """Run the GUI application"""
         try:
             # Setup viewport
-            dpg.create_viewport(title="🤖 SimpleMMO Bot - Modern GUI",
-                              width=1200, height=800, resizable=True)
+            dpg.create_viewport(
+                title="🤖 SimpleMMO Bot - Modern GUI", width=1200, height=800, resizable=True
+            )
             dpg.setup_dearpygui()
             dpg.show_viewport()
             dpg.set_primary_window("main_window", True)

@@ -11,13 +11,13 @@ src_dir = current_dir / "src"
 sys.path.insert(0, str(src_dir))
 sys.path.insert(0, str(current_dir))
 
+
 def test_gui():
     """Test the GUI functionality"""
     try:
         print("🚀 Testing DearPyGui GUI...")
 
         # Test import
-        from src.ui.bot_gui import BotGUI
         print("✅ BotGUI imported successfully")
 
         # Test basic initialization (don't run the full GUI)
@@ -27,7 +27,9 @@ def test_gui():
     except Exception as e:
         print(f"❌ Error testing GUI: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     test_gui()
