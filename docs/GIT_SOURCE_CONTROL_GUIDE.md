@@ -6,7 +6,7 @@
 
 ```
 1. Abra o Source Control (Ctrl+Shift+G)
-2. Olhe a seção "Changes" 
+2. Olhe a seção "Changes"
 3. LEIA cada nome de arquivo listado
 4. PERGUNTE-SE: "Eu quero este arquivo no meu projeto?"
 ```
@@ -15,7 +15,7 @@
 
 ```
 ✅ main.py (suas modificações)
-✅ context.py (suas modificações)  
+✅ context.py (suas modificações)
 ✅ new_feature.py (arquivo novo que você criou)
 
 AÇÃO: Clique no "+" ao lado do arquivo → Stage → Commit
@@ -29,8 +29,8 @@ AÇÃO: Clique no "+" ao lado do arquivo → Stage → Commit
 ❌ visual_test.py (arquivo de teste antigo)
 ❌ algum_arquivo_0kb.py (arquivo vazio)
 
-AÇÃO: 
-- NÃO clique no "+" 
+AÇÃO:
+- NÃO clique no "+"
 - Execute: git checkout HEAD -- nome_do_arquivo
 - OU: git clean -fd (para arquivos não rastreados)
 ```
@@ -140,7 +140,7 @@ git pull               # Atualiza com o repositório remoto
 ## 🎓 **LIÇÃO PRINCIPAL:**
 
 > **"Sempre LEIA antes de CLICAR no Source Control!"**
-> 
+>
 > O Source Control é uma ferramenta poderosa, mas clicar sem pensar pode trazer arquivos antigos de volta ao projeto.
 
 ---
