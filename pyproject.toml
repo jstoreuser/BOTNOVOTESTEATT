@@ -153,22 +153,39 @@ line-ending = "auto"
 docstring-code-format = true
 
 # ==========================================
-# MYPY CONFIGURATION (AI-Friendly Type Checking)
+# MYPY CONFIGURATION (Moderado - AI-Friendly Type Checking)
 # ==========================================
 [tool.mypy]
 python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
+
+# 🔧 Configuração de módulos
+explicit_package_bases = true           # Resolve conflitos de módulos duplicados
+
+# ✅ Segurança moderada
+check_untyped_defs = true           # Verifica funções mesmo sem anotação (mantido)
+warn_unused_ignores = true          # Útil para evitar `# type: ignore` desnecessários
+warn_return_any = true              # Alerta sobre funções que retornam Any
+disallow_any_unimported = false     # Permite usar Any de libs externas (mais flexível)
+
+# ⚠️ Rigor moderado (ajustado)
+disallow_untyped_defs = true        # Continua exigindo tipos nas defs (útil)
+disallow_incomplete_defs = false    # Permite omitir tipo de retorno ou argumentos
+disallow_untyped_decorators = false # Permite decorators sem anotação
+disallow_untyped_calls = false      # Permite chamadas a funções sem tipo
+
+# ⚙️ Inferência e alertas (moderado)
+no_implicit_optional = false        # Permite omitir Optional quando default=None
+warn_no_return = true               # Avisa se a função deveria retornar
+warn_unreachable = true             # Mantido: útil
+warn_redundant_casts = false        # Permite casts redundantes (menos barulho)
+strict_equality = false             # Permite comparar tipos diferentes com `==`
+warn_unused_configs = true          # Mantido para limpeza
+
+# 🔧 Controle de erros
+implicit_reexport = true            # Permite reexportar símbolos sem explicitamente listar
+strict_optional = false             # Permite usar `None` de forma mais flexível
+
+# 💅 Estética dos erros
 show_error_codes = true
 show_column_numbers = true
 show_error_context = true

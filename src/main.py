@@ -1,162 +1,295 @@
 """
-🤖 SimpleMMO Bot v5.0.0 - Advanced AI-Powered Automation
+🤖 SimpleMMO Bot - Modern Automation
 
-Modern AI-powered automation bot for SimpleMMO with:
-- Intelligent decision making engine
-- Advanced captcha resolution
-- Smart monitoring and analytics
-- Modern GUI interface
-- Playwright browser automation
-
-Author: BotNovoTesteAtt Team
-Version: 5.0.0
-License: MIT
+Simple main entry point for the SimpleMMO Bot using modern technologies:
+- Playwright for web automation
+- Async/await for performance
+- Modular architecture
 """
-
-from __future__ import annotations
 
 import asyncio
 import sys
 from pathlib import Path
-from typing import NoReturn
+from typing import TYPE_CHECKING, Any
 
-# Add src directory to Python path
-sys.path.insert(0, str(Path(__file__).parent))
+from loguru import logger
 
-from utils.config import load_config
-from utils.logging import setup_logging
-from ui.gui import ModernBotGUI
-from core.bot_controller import BotController
-from core.monitoring_system import MonitoringSystem
-from core.ai_decision_engine import AIDecisionEngine
+# Constants
+CYCLE_LOG_INTERVAL = 10  # Log status every 10 cycles
+
+# Add src directory to Python path for direct execution (before other imports)
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
+sys.path.insert(0, str(current_dir))
+sys.path.insert(0, str(project_root))
+
+# Now we can import our modules
+try:
+    from automation.web_engine import get_web_engine
+    from systems.captcha import CaptchaSystem
+    from systems.combat import CombatSystem
+    from systems.gathering import GatheringSystem
+    from systems.healing import HealingSystem
+    from systems.steps import StepSystem
+except ImportError as e:
+    logger.error(f"Failed to import systems: {e}")
+    sys.exit(1)
+
+if TYPE_CHECKING:
+    from config.types import BotConfig
 
 
-async def main() -> NoReturn:
-    """
-    🚀 Main entry point for SimpleMMO Bot v5.0.0
+async def initialize_systems(config: "BotConfig") -> tuple[Any, ...] | None:
+    """Initialize all bot systems"""
+    logger.info("🔧 Initializing bot systems...")
 
-    Initializes all core components:
-    - AI-powered decision engine
-    - Modern GUI interface
-    - Advanced monitoring system
-    - Playwright automation engine
-    - Smart captcha resolution
+    # Initialize web engine
+    logger.info("🌐 Initializing web automation engine...")
+    web_engine = await get_web_engine()
+    if not web_engine:
+        logger.error("❌ Failed to initialize web engine")
+        return None
 
-    Returns:
-        NoReturn: Runs until user terminates
-    """
-    monitoring = None
-    bot_controller = None
+    logger.success("✅ Web engine ready")
+
+    # Initialize systems
+    gathering = GatheringSystem(config)
+    healing = HealingSystem(config)
+    steps = StepSystem(config)
+    combat = CombatSystem(config)
+    captcha = CaptchaSystem(config)
+
+    # Initialize each system
+    systems = [
+        ("Gathering", gathering),
+        ("Healing", healing),
+        ("Steps", steps),
+        ("Combat", combat),
+        ("Captcha", captcha)
+    ]
+
+    for name, system in systems:
+        try:
+            if hasattr(system, 'initialize'):
+                result = await system.initialize()
+                if not result:
+                    logger.error(f"❌ Failed to initialize {name} System")
+                    return None
+        except Exception as e:
+            logger.error(f"❌ Error initializing {name} System: {e}")
+            return None
+
+    logger.success("✅ All systems initialized successfully")
+    return web_engine, gathering, healing, steps, combat, captcha
+
+
+async def check_and_handle_captcha(captcha) -> bool:
+    """Check and handle captcha if present"""
+    if await captcha.is_captcha_present():
+        logger.warning("🔒 Captcha detected - resolving...")
+        captcha_resolved = await captcha.solve_captcha()
+        if not captcha_resolved:
+            logger.error("❌ Failed to resolve captcha")
+            await asyncio.sleep(5)
+            return False
+        logger.success("✅ Captcha resolved - continuing automation")
+        return True
+    return False
+
+
+async def check_and_handle_gathering(gathering) -> bool:
+    """Check and handle gathering opportunities"""
+    if await gathering.is_gather_available():
+        logger.info("⛏️ Gathering opportunity found!")
+        success = await gathering.start_gathering()
+        if success:
+            logger.success("✅ Gathering completed - checking for new events...")
+            return True
+        else:
+            logger.warning("⚠️ Gathering failed - continuing...")
+    return False
+
+
+async def check_and_handle_combat(combat) -> bool:
+    """Check and handle combat opportunities"""
+    if await combat.is_combat_available():
+        logger.info("⚔️ Combat opportunity found!")
+        success = await combat.start_combat()
+        if success:
+            logger.success("✅ Combat completed - checking for new events...")
+            return True
+        else:
+            logger.warning("⚠️ Combat failed - continuing...")
+    return False
+
+
+async def check_and_handle_healing(healing) -> bool:
+    """Check and handle character healing"""
+    health_status = await healing.check_health()
+    if health_status.get("needs_healing", False):
+        logger.info("❤️ Character needs healing!")
+        healing_success = await healing.heal_character()
+        if healing_success:
+            logger.success("✅ Healing completed - continuing...")
+            return True
+        else:
+            logger.warning("⚠️ Healing failed - continuing...")
+    return False
+
+
+async def check_and_handle_step(steps) -> bool:
+    """Check and handle step taking"""
+    if await steps.is_step_available():
+        logger.info("👣 No events found - taking step to trigger new event...")
+        step_taken = await steps.take_step()
+        if step_taken:
+            logger.success("✅ Step taken - checking immediately for new events...")
+            return True
+        else:
+            logger.warning("⚠️ Step failed - continuing...")
+    return False
+
+
+async def run_bot_loop(web_engine, gathering, healing, steps, combat, captcha) -> None:
+    """Main bot automation loop"""
+    logger.info("🚀 Starting bot automation loop...")
+
+    # Keep track of cycles for reduced logging
+    cycles = 0
+    last_cycle_log = 0
 
     try:
-        # 📋 Load configuration
-        config = await load_config()
+        while True:
+            cycles += 1
 
-        # 📝 Setup advanced logging
-        logger = setup_logging(
-            level=config.get("log_level", "INFO"),
-            enable_file_logging=True,
-            enable_analytics=True
-        )
+            # Every 10 cycles, show a status update
+            if cycles % CYCLE_LOG_INTERVAL == 1 or cycles - last_cycle_log >= CYCLE_LOG_INTERVAL:
+                logger.info(f"🔄 Cycle {cycles} - Checking current situation...")
+                last_cycle_log = cycles
 
-        logger.info("🤖 Starting SimpleMMO Bot v5.0.0 - AI-Powered Automation")
-        logger.info(f"⚙️ Configuration loaded: {len(config)} settings")
+            # Check for captcha first (highest priority)
+            captcha_handled = await check_and_handle_captcha(captcha)
+            if captcha_handled is False:  # Captcha failed to resolve
+                continue
 
-        # 📊 Initialize monitoring system
-        monitoring = MonitoringSystem(config)
-        await monitoring.start_monitoring()
-        logger.info("📊 Advanced monitoring system activated")
+            # Check for gathering opportunities
+            if await check_and_handle_gathering(gathering):
+                continue  # Check immediately for new events after gathering
 
-        # 🧠 Initialize AI decision engine
-        ai_engine = AIDecisionEngine(config)
-        await ai_engine.initialize()
-        logger.info("🧠 AI decision engine initialized")
+            # Check for combat opportunities
+            if await check_and_handle_combat(combat):
+                continue  # Check immediately for new events after combat
 
-        # 🖥️ Initialize modern GUI
-        gui = ModernBotGUI(config, monitoring)
-        logger.info("🖥️ Modern GUI interface loaded")
+            # Check character health
+            if await check_and_handle_healing(healing):
+                continue
 
-        # 🎮 Initialize bot controller
-        bot_controller = BotController(
-            config=config,
-            monitoring=monitoring,
-            ai_engine=ai_engine,
-            gui=gui
-        )
-        await bot_controller.initialize()
-        logger.info("🎮 Bot controller ready for automation")
+            # If no events found, check if step is available
+            if await check_and_handle_step(steps):
+                continue  # Check immediately for new events after step
+            else:
+                # Handle step not available case with reduced logging
+                await _handle_step_not_available(cycles, last_cycle_log, web_engine, steps)
 
-        # 🚀 Start the application
-        logger.info("🚀 Launching application - Ready for AI-Human collaboration!")
-        await gui.run_async(bot_controller)
+            # Small delay to prevent CPU overuse
+            await asyncio.sleep(0.1)
 
     except KeyboardInterrupt:
-        logger.info("� Application stopped by user request")
+        logger.info("🛑 Bot stopped by user")
     except Exception as e:
-        logger.error(f"❌ Critical error in main application: {e}")
-        logger.exception("Full error traceback:")
-        raise
+        logger.error(f"❌ Unexpected error in bot loop: {e}")
     finally:
-        # 🧹 Cleanup resources
-        if bot_controller:
-            await bot_controller.shutdown()
-        if monitoring:
-            await monitoring.stop_monitoring()
-        logger.info("✅ Application cleanup completed successfully")
+        await _cleanup_systems(web_engine)
 
-        # Initialize bot controller
-        bot_controller = BotController(
-            config=config,
-            monitoring=monitoring
-        )
-        logger.info("🎮 Bot controller ready")
 
-        # Initialize modern GUI interface
-        gui = ModernBotGUI(
-            config=config,
-            logger=logger,
-            bot_controller=bot_controller,
-            monitoring=monitoring
-        )
-        logger.info("🖥️ Modern GUI interface initialized")
+async def _handle_step_not_available(cycles: int, last_cycle_log: int, web_engine, steps) -> None:
+    """Handle case when step is not available"""
+    # Only log this once per waiting session, not every cycle
+    if cycles - last_cycle_log <= 1:  # Only log if we haven't recently logged cycle info
+        logger.info("⏳ Step not available - waiting for button to appear...")
 
-        # Setup cross-system connections
-        bot_controller.set_gui_callback(gui.update_from_bot)
-        gui.register_callback("start", bot_controller.start)
-        gui.register_callback("stop", bot_controller.stop)
+    # First, do a quick check if we might need to navigate
+    current_url = ""
+    try:
+        page = await web_engine.get_page()
+        if page:
+            current_url = page.url
+    except Exception:
+        pass
 
-        logger.info("🔗 All systems connected and ready")
-        logger.info("✨ SimpleMMO automation bot is now running!")
-        logger.info("🧠 AI captcha resolution will be added in future updates")
+    # If not on a game page at all, navigate first
+    if not current_url or "simple-mmo.com" not in current_url:
+        logger.info("🗺️ Not on game page - navigating to travel page...")
+        await steps.navigate_to_travel()
+        await asyncio.sleep(2)  # Wait after navigation
+        return
 
-        # Start the bot interface (async main loop)
-        await gui.run_async()
+    # If we're on a game page, just wait for the step button to appear
+    if cycles - last_cycle_log <= 1:  # Only log once per waiting session
+        logger.info("🕰️ On game page - waiting for step button...")
 
-    except KeyboardInterrupt:
-        logger.info("🛑 Bot stopped by user (Ctrl+C)")
-        if monitoring:
-            await monitoring.stop_monitoring()
-        sys.exit(0)
+    # Wait for step button with indefinite patience (this handles the waiting internally)
+    step_available = await steps.wait_for_step_button(timeout=30)
+    if step_available:
+        logger.success("✅ Step button became available!")
+    else:
+        logger.debug("⏳ Still waiting for step button...")
+
+
+async def _cleanup_systems(web_engine) -> None:
+    """Clean up systems before exit"""
+    try:
+        logger.info("🧹 Cleaning up systems...")
+        if web_engine:
+            await web_engine.shutdown()
+        logger.success("✅ Cleanup complete")
     except Exception as e:
-        logger.error(f"💥 Critical error: {e}", exc_info=True)
-        if monitoring:
-            monitoring.record_error("critical_startup_error", str(e))
-            await monitoring.stop_monitoring()
-        sys.exit(1)
+        logger.warning(f"⚠️ Cleanup warning (non-critical): {e}")
 
 
-def sync_main() -> None:
+async def main():
     """
-    Synchronous wrapper for the async main function.
-
-    This allows the bot to be run from multiple contexts:
-    - Command line: python main.py
-    - IDE: F5 debug mode
-    - Task runner: VS Code tasks
-    - Package scripts: entry points in pyproject.toml
+    🚀 Simple main entry point for SimpleMMO Bot
     """
     try:
-        # Use asyncio.run for proper async context management
+        logger.info("🤖 Starting SimpleMMO Bot - Modern Edition")
+
+        # Basic configuration
+        config: BotConfig = {
+            "bot_name": "SimpleMMO Bot Modern",
+            "log_level": "INFO",
+            "browser_headless": False,
+            "auto_heal": True,
+            "auto_gather": True,
+            "auto_combat": True,
+        }
+
+        logger.info("⚙️ Configuration loaded")
+
+        # Initialize all systems
+        systems = await initialize_systems(config)
+        if not systems:
+            logger.error("❌ Failed to initialize systems")
+            return
+
+        web_engine, gathering, healing, steps, combat, captcha = systems
+
+        # Run the main bot loop
+        await run_bot_loop(web_engine, gathering, healing, steps, combat, captcha)
+
+    except Exception as e:
+        logger.error(f"❌ Critical error in main: {e}")
+    finally:
+        try:
+            # Final cleanup
+            logger.info("🔚 Bot execution complete")
+        except Exception as e:
+            logger.warning(f"⚠️ Final cleanup warning: {e}")
+
+
+def sync_main():
+    """Synchronous wrapper for the async main function."""
+    try:
         asyncio.run(main())
     except KeyboardInterrupt:
         print("\n🛑 Bot stopped by user")
