@@ -2,9 +2,9 @@
 🎨 UI Module
 
 Módulo responsável pela interface gráfica do bot.
-Contém a GUI moderna com DearPyGui.
+Contém a GUI moderna com CustomTkinter.
 """
 
-from .bot_gui import BotGUI
+from .modern_bot_gui import ModernBotGUI
 
-__all__ = ["BotGUI"]
+__all__ = ["ModernBotGUI"]

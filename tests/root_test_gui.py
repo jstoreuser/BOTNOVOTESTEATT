@@ -38,7 +38,6 @@ def test_gui():
         # Test basic initialization (don't run the full GUI)
         print("✅ Modern GUI test completed successfully!")
         print("💡 To run the Modern GUI, use: python src/main.py")
-        print("💡 To run the DearPyGui fallback, use: python run_gui.py")
 
     except Exception as e:
         print(f"❌ Error testing GUI: {e}")

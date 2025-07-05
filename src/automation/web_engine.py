@@ -1,15 +1,13 @@
 """
 🌐 Web Automation Engine for SimpleMMO Bot
-            # If no existing browser, warn user
-            logger.warning("⚠️ No existing browser found!")
-            logger.info("🔧 Please run demo_bot_completo.py first to start browser with Profile 1")
-            logger.info("💡 Or manually start Chromium with your profile")
-        else:
-            # Don't start new browser to avoid profile conflicts
-            return Falsen web automation using Playwright (replaces Selenium completely).
+
+Modern web automation using Playwright (replaces Selenium completely).
 Simplified and clean implementation for better maintainability.
 """
 
+import asyncio
+import os
+import platform
 import subprocess
 import time
 from pathlib import Path
@@ -44,24 +42,52 @@ class WebAutomationEngine:
         """Initialize Playwright browser"""
         try:
             logger.info("🌐 Initializing Playwright browser...")
+            logger.debug(f"🔧 Config: headless={self.browser_headless}, port={self.debugging_port}")
 
             # ALWAYS try to connect to existing browser first (Profile 1)
             logger.info("🔗 Prioritizing connection to existing browser with saved profile...")
-            if await self._connect_to_existing_browser():
+            connect_result = await self._connect_to_existing_browser()
+
+            if connect_result:
                 logger.success("✅ Connected to existing browser with your saved profile!")
-                self.is_initialized = True
-                return True
+                # Verify connection is working
+                page_check = await self.get_page()
+                if page_check:
+                    logger.debug(f"✅ Page validation successful: {page_check.url}")
+                    self.is_initialized = True
+                    return True
+                else:
+                    logger.warning("⚠️ Connected but page validation failed")
 
-            # If no existing browser, warn user
-            logger.warning("⚠️ No existing browser found!")
-            logger.info("� Please run demo_bot_completo.py first to start browser with Profile 1")
-            logger.info("💡 Or manually start Chromium with your profile")
+            logger.info("🚀 No existing browser found or connection failed, starting Chromium...")
+            start_result = await self._start_chromium_with_profile()
 
-            # Don't start new browser to avoid profile conflicts
-            return False
+            if start_result:
+                # Wait for browser to be ready
+                await self._wait_for_browser_ready()
+
+                # Try to connect again
+                connect_retry = await self._connect_to_existing_browser()
+                if connect_retry:
+                    # Final validation
+                    page_check = await self.get_page()
+                    if page_check:
+                        logger.success("✅ Connected to newly started Chromium and validated!")
+                        self.is_initialized = True
+                        return True
+                    else:
+                        logger.error("❌ Connected but final page validation failed")
+                        return False
+                else:
+                    logger.error("❌ Could not connect to newly started browser")
+                    return False
+            else:
+                logger.error("❌ Could not start Chromium with persistent profile")
+                return False
 
         except Exception as e:
             logger.error(f"❌ Failed to initialize browser: {e}")
+            logger.exception("Full initialization error:")
             await self.cleanup()
             return False
 
@@ -70,17 +96,37 @@ class WebAutomationEngine:
         try:
             logger.info("🔗 Attempting to connect to existing browser on port 9222...")
 
-            self.playwright = await async_playwright().start()
+            # Start playwright if not already started
+            if not self.playwright:
+                logger.debug("🎭 Starting Playwright...")
+                self.playwright = await async_playwright().start()
+                logger.debug("✅ Playwright started")
+
+            # Attempt CDP connection
+            logger.debug(f"🔌 Connecting to CDP endpoint: http://localhost:{self.debugging_port}")
             self.browser = await self.playwright.chromium.connect_over_cdp(
                 f"http://localhost:{self.debugging_port}"
             )
+            logger.debug("✅ CDP connection established")
 
             # Get existing context or create new one
             contexts = self.browser.contexts
+            logger.debug(f"📑 Found {len(contexts)} existing contexts")
+
             if contexts:
                 self.context = contexts[0]
+                logger.debug(f"📄 Using existing context: {id(self.context)}")
+
                 pages = self.context.pages
-                self.page = pages[0] if pages else await self.context.new_page()
+                logger.debug(f"📄 Found {len(pages)} pages in context")
+
+                if pages:
+                    self.page = pages[0]
+                    logger.debug(f"📄 Using existing page: {id(self.page)}")
+                else:
+                    logger.debug("📄 No pages found, creating new page...")
+                    self.page = await self.context.new_page()
+                    logger.debug(f"📄 Created new page: {id(self.page)}")
 
                 # Log current page info
                 current_url = self.page.url
@@ -89,13 +135,35 @@ class WebAutomationEngine:
                 logger.info(f"📍 Current page: {page_title}")
                 logger.info(f"🌐 Current URL: {current_url}")
 
+                # Ensure we're on travel page
+                if not current_url.endswith("/travel"):
+                    logger.info("🧭 Navigating to travel page...")
+                    await self.page.goto(self.target_url)
+                    await self.page.wait_for_load_state("networkidle")
+                    logger.success("✅ Navigation to travel page complete")
+
             else:
+                logger.debug("📑 No existing contexts, creating new one...")
                 self.context = await self.browser.new_context()
+                logger.debug(f"📄 Created new context: {id(self.context)}")
+
                 self.page = await self.context.new_page()
+                logger.debug(f"📄 Created new page: {id(self.page)}")
                 logger.info("📄 Created new context and page")
 
+                # Navigate to travel page
+                logger.info("🧭 Navigating to travel page...")
+                await self.page.goto(self.target_url)
+                await self.page.wait_for_load_state("networkidle")
+                logger.success("✅ Navigation complete")
+
             # Test if connection works
-            await self.page.title()
+            logger.debug("🧪 Testing page connection...")
+            test_title = await self.page.title()
+            logger.debug(f"✅ Page test successful: {test_title}")
+
+            # Final state validation
+            logger.debug(f"🔍 Final state - Page: {self.page is not None}, Context: {self.context is not None}")
             return True
 
         except Exception as e:
@@ -145,23 +213,40 @@ class WebAutomationEngine:
         """Get current page instance"""
         if self.page:
             try:
-                # Test if page is still valid
-                await self.page.title()
-                return self.page
-            except Exception:
-                logger.warning("Current page invalid, cleaning reference")
-                self.page = None
+                # Test if page is still valid with a very lightweight check
+                # Use page.is_closed() if available, otherwise use evaluate
+                if hasattr(self.page, 'is_closed') and self.page.is_closed():
+                    # Only log when page actually becomes invalid
+                    logger.debug("Page is closed, cleaning reference")
+                    self.page = None
+                    return None
 
-        return self.page
+                # Minimal operation to test connectivity
+                _ = self.page.url  # This is a property, should be fast
+                return self.page
+            except Exception as e:
+                # Only log when page actually becomes invalid
+                logger.debug(f"Current page invalid, cleaning reference: {e}")
+                self.page = None
+                return None
+        else:
+            # Only log when there's genuinely no page available (rare case)
+            if not hasattr(self, '_no_page_logged') or not self._no_page_logged:
+                logger.warning("❌ No page available - page is None")
+                self._no_page_logged = True
+            return None
 
     async def get_context(self) -> BrowserContext | None:
         """Get current browser context for tab management"""
         if self.context:
             try:
-                # Test if context is still valid
+                # Test if context is still valid with a lightweight check
+                # Check if context is closed (if the method exists)
+                if hasattr(self.context, 'pages'):
+                    _ = self.context.pages  # Simple property access
                 return self.context
-            except Exception:
-                logger.warning("Current context invalid, cleaning reference")
+            except Exception as e:
+                logger.debug(f"Current context invalid, cleaning reference: {e}")
                 self.context = None
 
         return self.context
@@ -325,14 +410,38 @@ class WebAutomationEngine:
     async def cleanup(self) -> None:
         """Cleanup resources"""
         try:
+            # Check if event loop is running before cleanup
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                logger.debug("Event loop is closed, skipping async cleanup")
+                return
+
             if self.page:
-                await self.page.close()
+                try:
+                    await self.page.close()
+                except Exception as e:
+                    logger.debug(f"Error closing page: {e}")
+
             if self.context:
-                await self.context.close()
+                try:
+                    await self.context.close()
+                except Exception as e:
+                    logger.debug(f"Error closing context: {e}")
+
             if self.browser:
-                await self.browser.close()
+                try:
+                    await self.browser.close()
+                except Exception as e:
+                    logger.debug(f"Error closing browser: {e}")
+
             if self.playwright:
-                await self.playwright.stop()
+                try:
+                    await self.playwright.stop()
+                except Exception as e:
+                    logger.debug(f"Error stopping playwright: {e}")
+
         except Exception as e:
             logger.debug(f"Error during cleanup: {e}")
         finally:
@@ -344,30 +453,304 @@ class WebAutomationEngine:
     async def shutdown(self) -> None:
         """Shutdown browser"""
         logger.info("🌐 Shutting down Web Automation Engine...")
-        await self.cleanup()
+
+        try:
+            await self.cleanup()
+        except Exception as e:
+            logger.debug(f"Error during shutdown cleanup: {e}")
+
         self.is_initialized = False
         logger.success("✅ Web Automation Engine shutdown complete")
+
+    async def _start_chromium_with_profile(self) -> bool:
+        """Start Chromium with persistent profile like demo_bot_completo.py"""
+        try:
+            logger.info("🔧 Starting Chromium with persistent profile...")
+
+            # Get Chromium path from Playwright (Windows specific for now)
+            system = platform.system().lower()
+            if system != "windows":
+                logger.error("❌ Currently only Windows is supported")
+                return False
+
+            # Try to find Playwright's Chromium
+            username = os.getenv("USERNAME", "User")
+            chromium_patterns = [
+                rf"C:\Users\{username}\AppData\Local\ms-playwright\chromium-*\chrome-win\chrome.exe",
+                rf"C:\Users\{username}\AppData\Local\ms-playwright\chromium-1179\chrome-win\chrome.exe",
+            ]
+
+            chromium_path = None
+            for pattern in chromium_patterns:
+                matches = list(Path().glob(pattern.replace("C:\\", "")))
+                if matches:
+                    chromium_path = f"C:\\{matches[0]}"
+                    break
+
+            # Fallback: try common paths
+            if not chromium_path:
+                common_paths = [
+                    rf"C:\Users\{username}\AppData\Local\ms-playwright\chromium-1179\chrome-win\chrome.exe",
+                ]
+                for path in common_paths:
+                    if Path(path).exists():
+                        chromium_path = path
+                        break
+
+            if not chromium_path or not Path(chromium_path).exists():
+                logger.error("❌ Could not find Playwright Chromium executable")
+                logger.info("💡 Please run: python -m playwright install chromium")
+                return False
+
+            # Profile directory
+            profile_dir = Path(chromium_path).parent / "User Data"
+            profile_dir.mkdir(parents=True, exist_ok=True)
+
+            # Command to start Chromium with debugging and profile (same as demo_bot_completo.py)
+            command = [
+                chromium_path,
+                "--remote-debugging-port=9222",
+                f"--user-data-dir={profile_dir}",
+                "--profile-directory=perfilteste",
+                # Stealth flags
+                "--disable-blink-features=AutomationControlled",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-extensions-except",
+                "--disable-plugins-discovery",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-default-apps",
+                "--disable-background-timer-throttling",
+                "--disable-renderer-backgrounding",
+                "--disable-backgrounding-occluded-windows",
+                # Start at travel page
+                "https://web.simple-mmo.com/travel",
+            ]
+
+            logger.info("🚀 Starting Chromium with perfilteste profile...")
+            logger.info("📍 Opening directly at: https://web.simple-mmo.com/travel")
+
+            # Start process in background
+            subprocess.Popen(
+                command,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
+            )
+
+            logger.success("✅ Chromium started with perfilteste profile!")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to start Chromium: {e}")
+            return False
+
+    async def _wait_for_browser_ready(self) -> None:
+        """Wait for browser to be ready for connection"""
+        logger.info("⏰ Waiting for browser to be ready...")
+        for i in range(10):  # Wait up to 10 seconds
+            try:
+                # Try a quick connection test
+                test_playwright = await async_playwright().start()
+                try:
+                    test_browser = await test_playwright.chromium.connect_over_cdp(
+                        "http://localhost:9222"
+                    )
+                    await test_browser.close()
+                    await test_playwright.stop()
+                    logger.success("✅ Browser is ready!")
+                    return
+                except Exception:
+                    await test_playwright.stop()
+
+            except Exception:
+                pass
+
+            await asyncio.sleep(1)
+            logger.debug(f"Still waiting... ({i + 1}/10)")
+
+    async def ensure_on_travel_page(self) -> bool:
+        """Ensure we're on the travel page, navigate if necessary"""
+        page = await self.get_page()
+        if not page:
+            return False
+
+        try:
+            current_url = page.url
+
+            # If not on travel page, navigate there
+            if not current_url.endswith("/travel"):
+                logger.info(f"🧭 Current page: {current_url} - navigating to travel...")
+                await page.goto(self.target_url)
+                await page.wait_for_load_state("networkidle")
+
+                # Verify we're now on travel page
+                new_url = page.url
+                if new_url.endswith("/travel"):
+                    logger.success("✅ Successfully navigated to travel page")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Navigation may have failed, current URL: {new_url}")
+                    return False
+            else:
+                logger.debug("✅ Already on travel page")
+                return True
+
+        except Exception as e:
+            logger.error(f"❌ Error ensuring travel page: {e}")
+            return False
+
+    async def navigate_to_travel(self) -> bool:
+        """Navigate specifically to travel page and ensure we stay there"""
+        return await self.ensure_on_travel_page()
+
+    async def is_context_destroyed(self) -> bool:
+        """Check if execution context was destroyed (navigation crash)"""
+        try:
+            # Wait a moment if page/context is temporarily None (might be initializing)
+            if not self.page or not self.context:
+                await asyncio.sleep(0.5)  # Give it a moment
+                if not self.page or not self.context:
+                    logger.warning("🚨 Page or context is None after wait - likely destroyed")
+                    return True
+
+            # Check if page is closed (avoid calling methods on invalid pages)
+            try:
+                if hasattr(self.page, 'is_closed') and self.page.is_closed():
+                    logger.warning("🚨 Page is closed - destroyed")
+                    return True
+            except Exception:
+                logger.warning("🚨 Cannot check if page is closed - likely destroyed")
+                return True
+
+            # Try to get current URL - this often fails when context is destroyed
+            try:
+                current_url = self.page.url
+            except Exception as e:
+                if "'NoneType' object has no attribute 'send'" in str(e):
+                    logger.warning("� Page connection lost - context destroyed")
+                    return True
+                raise  # Re-raise other exceptions
+
+            if not current_url or current_url == "about:blank":
+                logger.warning("🚨 Page URL is blank or empty - likely destroyed")
+                return True
+
+            # Try a simple DOM operation to test if context is alive (with extra protection)
+            try:
+                await self.page.evaluate("() => document.readyState")
+            except Exception as e:
+                if "'NoneType' object has no attribute 'send'" in str(e):
+                    logger.warning("🚨 DOM operation failed - context destroyed")
+                    return True
+                raise  # Re-raise other exceptions
+
+            # Only consider it destroyed if we're on a completely different domain
+            if "simple-mmo" not in current_url and "localhost" not in current_url and current_url != "about:blank":
+                logger.warning(f"🚨 Page navigated away from SimpleMMO: {current_url}")
+                return True
+
+            return False
+
+        except Exception as e:
+            error_msg = str(e).lower()
+
+            # Handle specific connection lost errors
+            if "'nonetype' object has no attribute 'send'" in error_msg:
+                logger.warning("🚨 Connection lost - context destroyed")
+                return True
+
+            # Only trigger on definitive context destruction errors
+            if any(
+                phrase in error_msg
+                for phrase in [
+                    "execution context was destroyed",
+                    "target closed",
+                    "page closed",
+                    "browser closed",
+                    "context was destroyed",
+                ]
+            ):
+                logger.warning(f"🚨 Context destroyed detected: {e}")
+                return True
+            # For other errors (like network issues), don't consider context destroyed
+            logger.debug(f"Context check error (assuming alive): {e}")
+            return False
+
+    async def handle_context_destruction(self):
+        """Handle execution context destruction by cleaning up"""
+        logger.warning("🔄 Handling context destruction...")
+        self.page = None
+        self.context = None
+        # Don't cleanup browser completely, just invalidate page references
 
 
 class WebEngineManager:
     """Singleton manager for web engine"""
+
     _instance: WebAutomationEngine | None = None
 
     @classmethod
     async def get_instance(cls) -> WebAutomationEngine:
         """Get or create web engine instance"""
-        if cls._instance is None:
-            config = {"browser_headless": False, "target_url": "https://web.simple-mmo.com/travel"}
+        if cls._instance is None or not cls._instance.is_initialized:
+            # Force cleanup of any existing instance
+            if cls._instance:
+                logger.debug("🔄 Cleaning up existing uninitialized instance")
+                await cls._instance.cleanup()
+
+            config: dict[str, Any] = {
+                "browser_headless": False,
+                "target_url": "https://web.simple-mmo.com/travel",
+            }
+            logger.debug("🔄 Creating new WebAutomationEngine instance")
             cls._instance = WebAutomationEngine(config)
-            await cls._instance.initialize()
+
+            # Initialize with retry logic
+            max_retries = 3
+            for attempt in range(max_retries):
+                logger.debug(f"🔄 Initialization attempt {attempt + 1}/{max_retries}")
+                try:
+                    success = await cls._instance.initialize()
+                    if success:
+                        logger.debug("✅ WebEngine initialization successful")
+                        break
+                    else:
+                        logger.warning(f"⚠️ Initialization attempt {attempt + 1} failed")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(1)  # Wait before retry
+                except Exception as e:
+                    logger.warning(f"⚠️ Initialization attempt {attempt + 1} error: {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(1)  # Wait before retry
+
+            # Final validation
+            if not cls._instance.is_initialized:
+                logger.error("❌ Failed to initialize WebEngine after retries")
+
         return cls._instance
 
     @classmethod
     async def shutdown(cls) -> None:
         """Shutdown the web engine instance"""
         if cls._instance:
+            logger.debug("🔄 Shutting down WebEngineManager singleton")
             await cls._instance.shutdown()
             cls._instance = None
+            logger.debug("✅ WebEngineManager singleton reset")
+
+    @classmethod
+    async def force_reset(cls) -> None:
+        """Force complete reset of singleton"""
+        logger.info("🔄 Force resetting WebEngineManager...")
+        if cls._instance:
+            try:
+                await cls._instance.cleanup()
+            except Exception as e:
+                logger.debug(f"Cleanup error during force reset: {e}")
+            cls._instance = None
+        logger.success("✅ WebEngineManager force reset complete")
 
 
 async def get_web_engine() -> WebAutomationEngine:
@@ -384,7 +767,7 @@ async def get_page() -> Page | None:
 async def navigate_to_travel() -> bool:
     """Navigate to travel page"""
     engine = await get_web_engine()
-    return await engine.navigate_to("https://web.simple-mmo.com/travel")
+    return await engine.navigate_to_travel()
 
 
 def open_brave_browser() -> bool:

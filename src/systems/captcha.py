@@ -162,22 +162,64 @@ class CaptchaSystem:
 
     async def _solve_combat_captcha(self) -> bool:
         """
-        Solve the combat captcha popup by navigating to travel page.
+        Solve the combat captcha popup by immediately navigating to travel page.
         This converts the complex combat captcha to a simple travel captcha.
+        SIMPLIFIED: Always force return to travel page when combat captcha detected.
         """
-        logger.warning("🔒 COMBAT CAPTCHA DETECTED! Navigating to travel page to simplify...")
+        logger.warning("🔒 COMBAT CAPTCHA DETECTED! Immediately forcing return to travel page...")
 
-        # Import StepSystem dynamically to avoid circular imports
         try:
-            from systems.steps import StepSystem
-        except ImportError:
-            try:
-                from src.systems.steps import StepSystem
-            except ImportError:
-                logger.error("❌ Could not import StepSystem for navigation")
+            engine = await get_web_engine()
+            page = await engine.get_page()
+
+            if not page:
+                logger.error("❌ No page available for combat captcha handling")
                 return False
 
-        # Create a temporary StepSystem instance to use navigation
+            # Get current URL to build travel URL
+            current_url = page.url
+            logger.debug(f"🔒 Current URL: {current_url}")
+
+            # Extract base URL and build travel URL
+            if "simplemmo.me" in current_url:
+                base_url = current_url.split("simplemmo.me")[0] + "simplemmo.me"
+                travel_url = f"{base_url}/travel"
+
+                logger.info(f"🔒 Navigating directly to travel page: {travel_url}")
+
+                # Navigate directly to travel page
+                await page.goto(travel_url, wait_until="domcontentloaded", timeout=10000)
+                await asyncio.sleep(1.0)  # Wait for page to load
+
+                # Verify we're on travel page
+                new_url = page.url
+                if "/travel" in new_url:
+                    logger.success(
+                        "✅ Successfully navigated to travel page - combat captcha bypassed!"
+                    )
+                    return True
+                else:
+                    logger.warning(f"⚠️ Navigation may have failed, current URL: {new_url}")
+                    return False
+            else:
+                logger.error("❌ Could not determine base URL for navigation")
+                return False
+
+        except Exception as e:
+            logger.error(f"❌ Error handling combat captcha: {e}")
+            # Fallback: try to click browser back button
+            try:
+                engine = await get_web_engine()
+                page = await engine.get_page()
+                if page:
+                    await page.go_back()
+                    await asyncio.sleep(1.0)
+                    logger.info("🔒 Used browser back button as fallback")
+                    return True
+            except Exception as fallback_error:
+                logger.error(f"❌ Fallback navigation failed: {fallback_error}")
+
+            return False
         temp_steps = StepSystem(self.config)
         await temp_steps.initialize()
 
@@ -340,7 +382,7 @@ class CaptchaSystem:
             return False
 
     async def _click_captcha_button(self) -> bool:
-        """Click the captcha button to open new tab"""
+        """Click the captcha button to open new tab (simulate middle click)"""
         try:
             engine = await get_web_engine()
             page = await engine.get_page()
@@ -366,10 +408,49 @@ class CaptchaSystem:
                         element = await page.query_selector(selector)
 
                     if element and await element.is_visible():
-                        logger.info("🔒 Clicking captcha button...")
-                        await element.click()
-                        await asyncio.sleep(1)  # Wait for new tab to open
-                        return True
+                        logger.info("🔒 Clicking captcha button with middle click (new tab)...")
+
+                        # Method 1: Try to get href and open in new tab directly
+                        try:
+                            href = await element.get_attribute("href")
+                            if href:
+                                # Handle relative URLs
+                                if href.startswith("/"):
+                                    href = f"https://web.simple-mmo.com{href}"
+
+                                # Open in new tab using keyboard shortcut (Ctrl+click)
+                                await element.click(modifiers=["Control"])
+                                await asyncio.sleep(1)
+                                logger.info(f"🔒 Opened captcha in new tab: {href}")
+                                return True
+                        except Exception as e:
+                            logger.debug(f"Failed Ctrl+click method: {e}")
+
+                        # Method 2: Try middle click
+                        try:
+                            await element.click(button="middle")
+                            await asyncio.sleep(1)
+                            logger.info("🔒 Used middle click to open captcha")
+                            return True
+                        except Exception as e:
+                            logger.debug(f"Failed middle click method: {e}")
+
+                        # Method 3: Fallback to manual new tab creation
+                        try:
+                            href = await element.get_attribute("href")
+                            if href:
+                                if href.startswith("/"):
+                                    href = f"https://web.simple-mmo.com{href}"
+
+                                # Create new page in context
+                                context = await engine.get_context()
+                                if context:
+                                    new_page = await context.new_page()
+                                    await new_page.goto(href)
+                                    logger.info(f"🔒 Manually opened captcha in new tab: {href}")
+                                    return True
+                        except Exception as e:
+                            logger.debug(f"Failed manual new tab method: {e}")
 
                 except Exception as e:
                     logger.debug(f"Failed to click with selector {selector}: {e}")
@@ -390,18 +471,26 @@ class CaptchaSystem:
             if not context:
                 return False
 
-            # Wait for new tab to appear
-            for _attempt in range(10):  # Wait up to 5 seconds
+            logger.info("🔍 Looking for captcha tab...")
+
+            # Wait for new tab to appear (increased timeout)
+            for attempt in range(20):  # Wait up to 10 seconds
                 pages = context.pages
-                for page in pages:
+                logger.debug(f"🔍 Found {len(pages)} total tabs (attempt {attempt + 1}/20)")
+
+                for i, page in enumerate(pages):
+                    logger.debug(f"  Tab {i + 1}: {page.url}")
                     if "i-am-not-a-bot" in page.url:
                         self.captcha_tab = page
-                        logger.info(f"🔒 Found captcha tab: {page.url}")
+                        logger.success(f"🔒 Found captcha tab: {page.url}")
                         return True
 
                 await asyncio.sleep(0.5)
 
-            logger.warning("⚠️ Captcha tab not found after 5 seconds")
+            logger.warning("⚠️ Captcha tab not found after 10 seconds")
+            logger.info(
+                "💡 Manual intervention may be needed - please check if captcha tab opened manually"
+            )
             return False
 
         except Exception as e:
@@ -486,6 +575,9 @@ class CaptchaSystem:
                 except Exception as e:
                     logger.debug(f"Error returning to main tab: {e}")
 
+            # Force a step to refresh the page and remove captcha button
+            await self._force_step_after_captcha()
+
             # Reset references
             self.captcha_tab = None
             self.main_tab = None
@@ -497,6 +589,39 @@ class CaptchaSystem:
             logger.error(f"Error managing tabs: {e}")
             return False
 
+    async def _force_step_after_captcha(self) -> bool:
+        """Force a step after captcha resolution to refresh the page"""
+        try:
+            logger.info("👣 Forcing step after captcha to refresh page...")
+
+            # Get web engine
+            engine = await get_web_engine()
+            page = await engine.get_page()
+
+            if not page:
+                return False
+
+            # Simple approach: just reload the page to ensure clean state
+            logger.info("� Reloading page to ensure clean state after captcha...")
+            await page.reload(wait_until="domcontentloaded")
+
+            # Wait for page to be fully loaded
+            await asyncio.sleep(3)
+
+            # Verify we're on travel page
+            current_url = page.url
+            if "/travel" not in current_url:
+                logger.info("🔄 Navigating back to travel page...")
+                await page.goto("https://web.simple-mmo.com/travel", wait_until="domcontentloaded")
+                await asyncio.sleep(2)
+
+            logger.success("✅ Page refreshed and ready after captcha!")
+            return True
+
+        except Exception as e:
+            logger.warning(f"⚠️ Could not refresh page after captcha: {e}")
+            return False
+
     async def get_captcha_info(self) -> dict[str, Any]:
         """Get information about current captcha state"""
         return {
@@ -505,3 +630,27 @@ class CaptchaSystem:
             "captcha_tab_open": self.captcha_tab is not None,
             "main_tab_stored": self.main_tab is not None,
         }
+
+    async def reset_state(self):
+        """Reset captcha system state to initial values"""
+        logger.info("🔄 Resetting captcha system state...")
+
+        # Reset captcha state
+        self.captcha_tab = None
+        self.main_tab = None
+
+        # Close any open captcha tabs if they exist
+        try:
+            engine = await get_web_engine()
+            if engine and engine.browser:
+                contexts = engine.browser.contexts
+                for context in contexts:
+                    pages = context.pages
+                    for page in pages:
+                        if "/i-am-not-a-bot" in page.url or "captcha" in page.url.lower():
+                            await page.close()
+                            logger.debug("🔒 Closed orphaned captcha page")
+        except Exception as e:
+            logger.debug(f"Error cleaning captcha tabs: {e}")
+
+        logger.success("✅ Captcha system state reset")

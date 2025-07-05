@@ -20,10 +20,14 @@ sys.path.insert(0, str(project_root))
 
 # Import bot runner
 try:
-    from bot_runner import run_bot
+    from core.bot_runner import run_bot
 except ImportError as e:
-    logger.error(f"Failed to import bot runner: {e}")
-    sys.exit(1)
+    try:
+        from src.core.bot_runner import run_bot
+    except ImportError as e2:
+        logger.error(f"Failed to import bot runner: {e}")
+        logger.error(f"Alternative import also failed: {e2}")
+        sys.exit(1)
 
 if TYPE_CHECKING:
     from config.types import BotConfig

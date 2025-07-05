@@ -2,7 +2,6 @@
 playwright==1.53.0
 
 # === INTERFACE ===
-dearpygui==2.0.0
 customtkinter>=5.2.0
 
 # === LOGGING E FORMATAÇÃO ===

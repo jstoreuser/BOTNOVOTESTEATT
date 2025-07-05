@@ -146,6 +146,7 @@ class BotRunner:
         )
 
         logger.success("✅ Bot initialized successfully")
+        return True
 
     async def cleanup(self):
         """Cleanup bot and all systems"""

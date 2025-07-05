@@ -355,13 +355,17 @@ class StepSystem:
                         is_enabled = await element.is_enabled()
 
                         if is_visible and is_enabled:
+                            # Scroll less aggressively to keep player view stable
+                            await element.scroll_into_view_if_needed()
+                            await asyncio.sleep(0.1)  # Brief pause after scroll
+
                             # Minimal delay for human-like behavior
                             delay = random.uniform(
                                 self.fast_step_delay_min, self.fast_step_delay_max
                             )
                             await asyncio.sleep(delay)
 
-                            await element.click()
+                            await element.click(force=True)  # Force click to avoid extra scrolling
                             # Removed debug log for successful fast step to reduce spam
                             return True
 
@@ -448,12 +452,16 @@ class StepSystem:
                     )
 
                     if is_visible and is_enabled:
+                        # Scroll less aggressively for original-style clicks too
+                        await element.scroll_into_view_if_needed()
+                        await asyncio.sleep(0.1)  # Brief pause after scroll
+
                         # Original-style delay
                         delay = random.uniform(1.5, 2.5)
                         logger.debug(f"👣 Waiting {delay:.2f}s before click (original style)")
                         await asyncio.sleep(delay)
 
-                        await element.click()
+                        await element.click(force=True)  # Force click to avoid extra scrolling
                         logger.info("👣 Step taken using original-style detection")
                         return True
                     else:
@@ -564,6 +572,26 @@ class StepSystem:
         except Exception as e:
             logger.debug(f"Error getting step stats: {e}")
             return {"error": str(e)}
+
+    async def reset_state(self):
+        """Reset step system state to initial values"""
+        logger.info("🔄 Resetting step system state...")
+
+        # Reset step statistics
+        self.step_stats = {
+            "steps_taken": 0,
+            "successful_steps": 0,
+            "failed_steps": 0,
+            "last_step_time": 0,
+            "fast_steps": 0,
+            "original_steps": 0,
+        }
+
+        # Reset timing counters
+        self.last_disabled_log = 0
+        self.last_missing_log = 0
+
+        logger.success("✅ Step system state reset")
 
     # === COMPATIBILITY FUNCTIONS ===
     # These functions provide compatibility with the original step.py

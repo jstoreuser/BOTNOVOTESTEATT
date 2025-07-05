@@ -1,4 +1,10 @@
-# 🤖 SimpleMMO Bot -### 🎮 **Interface Gráfica Moderna (Padrão)**
+# 🤖 SimpleMMO Bot - Ultra Modern Web Automation
+
+**Bot moderno para SimpleMMO usando Playwright com sistema unificado step-based!**
+
+## 🎯 SISTEMA UNIFICADO
+
+### 🎮 **Interface Gráfica Moderna (Padrão)**
 ```bash
 python src/main.py
 ```
@@ -9,20 +15,10 @@ python src/main.py
 - 🎛️ **Modern switches** e botões estilizados
 - 🌐 **Browser launcher** integrado
 
-### 🎮 **Interface DearPyGui (Alternativa)**
-```bash
-python run_gui.py
-```
-
 ### 🤖 **Modo Console**
 ```bash
 python src/main_console.py
 ```
-
-### 🎭 **Demo da GUI Moderna**
-```bash
-python demo_modern_gui.py
-```tomation
 
 **Bot moderno para SimpleMMO usando Playwright com sistema unificado step-based!**
 
@@ -55,11 +51,6 @@ python src/main.py
 - **Browser launcher** integration
 - **Modern dark theme** interface
 
-### 🎮 **Interface Gráfica (Alternativa)**
-```bash
-python run_gui.py
-```
-
 ### 🤖 **Modo Console**
 ```bash
 python src/main_console.py
@@ -86,22 +77,29 @@ python scripts/tests/test_unified_system.py
 ### 📦 **Estrutura Organizada:**
 ```
 📦 BOTNOVOTESTATT/
-├── 🎮 run_gui.py               # ⭐ Entry Point GUI
-├── 📚 botlib.py                # Biblioteca de imports simplificados
-├── 🌐 browser_launcher.py      # Lançador de navegador
-├── 📁 src/                     # Código fonte modular
-│   ├── 🤖 bot_runner.py        # ⭐ Lógica Principal do Bot
-│   ├── 🚀 main.py              # ⭐ Entry Point Console
-│   ├── 🚀 automation/          # Automação web (Playwright)
-│   ├── 🎮 systems/             # Sistemas de gameplay
-│   ├── ⚙️ config/              # Configurações e contexto
+├── � src/                     # 🎯 Código fonte principal
+│   ├── 🤖 core/                # Lógica central do bot
+│   │   └── 🚀 bot_runner.py    # ⭐ Sistema principal do bot
 │   ├── 🎨 ui/                  # Interface gráfica
-│   │   └── 🎮 bot_gui.py       # ⭐ Interface DearPyGui Moderna
-│   ├── 🧠 ai/                  # IA (preparado para expansão)
-│   ├── 🚗 driver/              # Drivers (preparado)
-│   └── 🛠️ utils/               # Utilitários (preparado)
-├── 📁 scripts/                 # Scripts organizados
-│   ├── launchers/              # Scripts de lançamento
+│   │   └── 🎮 modern_bot_gui.py # ⭐ Interface CustomTkinter Moderna
+│   ├── 🌐 automation/          # Automação web (Playwright)
+│   │   └── 🌐 web_engine.py    # ⭐ Engine de automação
+│   ├── 🎮 systems/             # Sistemas de gameplay
+│   │   ├── ⚔️ combat.py        # Sistema de combate
+│   │   ├── ⛏️ gathering.py     # Sistema de coleta
+│   │   ├── 👣 steps.py         # Sistema de steps
+│   │   ├── 🩺 healing.py       # Sistema de cura
+│   │   └── 🔒 captcha.py       # Sistema de captcha
+│   ├── ⚙️ config/              # Configurações e contexto
+│   ├── 🔧 integrations/        # Integrações externas
+│   ├── � main.py              # ⭐ Entry Point GUI Moderno
+│   └── 🤖 main_console.py      # Entry Point Console
+├── 📁 tests/                   # 🧪 Todos os testes
+├── 📁 tools/                   # 🔧 Ferramentas auxiliares
+├── 📁 docs/                    # 📚 Documentação
+├── 📚 README.md                # ⭐ Documentação principal
+└── 📄 requirements.txt         # Dependências
+```
 │   ├── tests/                  # Scripts de teste
 │   └── demos/                  # Demonstrações
 └── 📁 docs/guides/             # Documentação detalhada
@@ -120,11 +118,28 @@ python scripts/tests/test_unified_system.py
 - `healing.py` - Sistema de cura
 - `captcha.py` - Sistema anti-captcha
 
+#### 🤖 **core/** - Core Logic
+- `bot_runner.py` - ⭐ **Sistema Principal do Bot**
+
 #### ⚙️ **config/** - Configuration
+- `types.py` - Tipos de configuração TypedDict
 - `context.py` - Gerenciamento de contexto e configurações
 
 #### 🎨 **ui/** - User Interface
-- `bot_gui.py` - ⭐ **Modern DearPyGui Interface**
+- `modern_bot_gui.py` - ⭐ **Modern CustomTkinter Interface**
+
+#### 🌐 **automation/** - Web Automation
+- `web_engine.py` - ⭐ **Engine de Automação Playwright**
+
+#### 🎮 **systems/** - Game Systems
+- `steps.py` - ⭐ **Sistema de Steps Inteligente**
+- `combat.py` - Sistema de Combate
+- `gathering.py` - Sistema de Coleta
+- `healing.py` - Sistema de Cura
+- `captcha.py` - Sistema de Captcha
+
+#### 🔧 **integrations/** - External Integrations
+- `browser_control.py` - Controle de Browser
 
 ---
 
@@ -139,7 +154,11 @@ python scripts/tests/test_unified_system.py
 ### 🧪 **Testar Steps:**
 ```bash
 # Teste rápido (3 steps)
-python scripts/tests/test_quick_steps.py
+python tests/test_quick_steps.py
+
+# Teste completo do sistema
+python tests/test_unified_system.py
+```
 
 # Teste completo
 python scripts/tests/test_smart_steps.py

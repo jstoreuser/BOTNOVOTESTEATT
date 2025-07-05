@@ -9,6 +9,7 @@ Ultra-modern GUI using CustomTkinter with:
 """
 
 import asyncio
+import sys
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -18,12 +19,14 @@ from loguru import logger
 
 # Import bot components
 try:
-    from ..bot_runner import BotRunner
+    from ..config.types import BotConfig
+    from ..core.bot_runner import BotRunner
 except ImportError:
     import sys
 
     sys.path.append(str(Path(__file__).parent.parent.parent))
-    from src.bot_runner import BotRunner
+    from src.config.types import BotConfig
+    from src.core.bot_runner import BotRunner
 
 try:
     from browser_launcher import BrowserLauncher
@@ -61,14 +64,68 @@ class ModernBotGUI:
         self.paused = False
         self.start_time = None
 
-        # GUI update flags
+        # GUI state flags
         self.update_running = False
+        self.shutdown_requested = False
+        self.widgets_destroyed = False
+
+        # Setup close protocol for graceful shutdown
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Create GUI
         self._create_widgets()
         self._start_gui_updater()
 
         logger.info("🎮 Modern GUI initialized")
+
+    def _safe_widget_update(self, widget_update_func):
+        """Safely update a widget, catching TclError if widget is destroyed"""
+        if self.widgets_destroyed or self.shutdown_requested:
+            return
+
+        try:
+            widget_update_func()
+        except Exception as e:
+            # Log but don't propagate widget update errors during shutdown
+            if not self.shutdown_requested:
+                logger.debug(f"Widget update error: {e}")
+
+    def _widget_exists(self, widget) -> bool:
+        """Check if a widget still exists and hasn't been destroyed"""
+        if self.widgets_destroyed or self.shutdown_requested:
+            return False
+
+        try:
+            # Try to access a property of the widget
+            _ = widget.winfo_exists()
+            return True
+        except Exception:
+            return False
+
+    def on_closing(self):
+        """Handle window close event gracefully"""
+        logger.info("🔒 GUI close requested")
+        self.shutdown_requested = True
+
+        # Stop GUI updates
+        self.update_running = False
+
+        # Stop bot if running
+        if self.running:
+            try:
+                self.stop_bot()
+            except Exception as e:
+                logger.debug(f"Error stopping bot during close: {e}")
+
+        # Mark widgets as destroyed before actually destroying
+        self.widgets_destroyed = True
+
+        # Close the window
+        try:
+            self.root.quit()
+            self.root.destroy()
+        except Exception as e:
+            logger.debug(f"Error destroying GUI: {e}")
 
     def _create_widgets(self):
         """Create and arrange GUI widgets"""
@@ -199,6 +256,15 @@ class ModernBotGUI:
         )
         self.auto_combat_switch.grid(row=3, column=0, sticky="w", padx=20, pady=5)
 
+        self.auto_quest_var = ctk.BooleanVar(value=False)  # Disabled by default
+        self.auto_quest_switch = ctk.CTkSwitch(
+            config_frame,
+            text="Auto Quests",
+            variable=self.auto_quest_var,
+            command=self._on_config_change,
+        )
+        self.auto_quest_switch.grid(row=4, column=0, sticky="w", padx=20, pady=5)
+
         self.headless_var = ctk.BooleanVar(value=False)
         self.headless_switch = ctk.CTkSwitch(
             config_frame,
@@ -206,7 +272,7 @@ class ModernBotGUI:
             variable=self.headless_var,
             command=self._on_config_change,
         )
-        self.headless_switch.grid(row=4, column=0, sticky="w", padx=20, pady=5)
+        self.headless_switch.grid(row=5, column=0, sticky="w", padx=20, pady=5)
 
         # Quick stats in control tab
         quick_stats_frame = ctk.CTkFrame(control_frame)
@@ -315,25 +381,81 @@ class ModernBotGUI:
                 logger.error(f"Failed to update config: {e}")
 
     def start_bot(self):
-        """Start the bot"""
+        """Start the bot with proper cleanup of previous instance"""
         if self.running:
             return
 
         try:
+            # Ensure complete cleanup of previous bot instance
+            if hasattr(self, "bot_thread") and self.bot_thread and self.bot_thread.is_alive():
+                logger.info("🔄 Waiting for previous bot thread to finish...")
+                self.bot_thread.join(timeout=5.0)  # Wait up to 5 seconds
+                if self.bot_thread.is_alive():
+                    logger.warning("⚠️ Previous bot thread still running - forcing new instance")            # CRITICAL: Force complete reset of web engine before creating new bot
+            logger.info("🔄 Force resetting web engine for fresh start...")
+            try:
+                import asyncio
+
+                # Create new event loop for this thread
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                # Import and force reset global web engine
+                try:
+                    from src.automation.web_engine import WebEngineManager
+                except ImportError:
+                    from automation.web_engine import WebEngineManager
+
+                # Force complete reset of singleton instance
+                loop.run_until_complete(WebEngineManager.force_reset())
+                logger.success("✅ Web engine force reset complete")
+
+            except Exception as e:
+                logger.warning(f"⚠️ Could not force reset web engine: {e}")
+
+            # If there's an existing bot_runner, ensure it's reset
+            if self.bot_runner:
+                logger.info("🔄 Resetting previous bot runner state...")
+                try:
+                    # Run reset and wait for completion
+                    loop.run_until_complete(self.bot_runner.reset_state())
+                    logger.success("✅ Previous bot state reset completed")
+
+                except Exception as e:
+                    logger.error(f"❌ Error resetting previous bot state: {e}")
+
+            # Reset all state variables
+            self.running = False
+            self.paused = False
+            self.bot_runner = None
+            self.bot_thread = None
+
+            # Small delay to ensure cleanup is complete
+            import time
+
+            time.sleep(1.0)  # Increased delay to ensure complete cleanup
+
             # Get configuration
-            config = {
-                "bot_name": "SimpleMMO Bot Modern GUI",
-                "log_level": "INFO",
-                "browser_headless": self.headless_var.get(),
+            config: BotConfig = {
                 "auto_heal": self.auto_heal_var.get(),
                 "auto_gather": self.auto_gather_var.get(),
                 "auto_combat": self.auto_combat_var.get(),
+                "auto_quests": self.auto_quest_var.get(),
+                "auto_steps": True,  # Always enable steps
+                "auto_captcha": True,  # Always enable captcha handling
+                "quests_enabled": self.auto_quest_var.get(),
+                "max_quests_per_cycle": 3,  # Default value
+                "browser_headless": self.headless_var.get(),
+                "target_url": "https://web.simple-mmo.com/travel",
             }
 
             # Store config for change detection
             self._last_config = config.copy()
 
-            # Create bot runner
+            # Create fresh bot runner instance
             self.bot_runner = BotRunner(config)
 
             # Start bot in separate thread
@@ -354,6 +476,10 @@ class ModernBotGUI:
             logger.error(f"❌ Failed to start bot: {e}")
             self._update_status("❌ Error", "red")
             self._add_log(f"❌ Failed to start bot: {e}")
+            # Reset state on error
+            self.running = False
+            self.bot_runner = None
+            self.bot_thread = None
 
     def pause_bot(self):
         """Pause or resume the bot"""
@@ -376,30 +502,42 @@ class ModernBotGUI:
                 logger.info("▶️ Bot resumed")
 
     def stop_bot(self):
-        """Stop the bot"""
+        """Stop the bot and reset all systems to initial state"""
         if not self.running:
             return
 
         try:
+            # Set running to False first
             self.running = False
+
+            # Stop the bot runner
             if self.bot_runner:
                 self.bot_runner.running = False
 
             # Wait for thread to finish (with timeout)
             if self.bot_thread and self.bot_thread.is_alive():
-                self.bot_thread.join(timeout=2.0)
+                logger.info("🔄 Waiting for bot thread to finish...")
+                self.bot_thread.join(timeout=5.0)
+                if self.bot_thread.is_alive():
+                    logger.warning("⚠️ Bot thread still running after timeout")
 
-            # Update UI state
+            # Clear bot references immediately to prevent further operations
+            self.bot_runner = None
+            self.bot_thread = None
             self.paused = False
+
+            # Update UI state only if widgets still exist
             self._update_button_states()
             self._update_status("⏹️ Stopped", "gray")
+            self._add_log("🛑 Bot stopped - ready for fresh start")
 
-            self._add_log("🛑 Bot stopped")
-            logger.info("🛑 Bot stopped")
+            logger.info("🛑 Bot stopped successfully")
 
         except Exception as e:
             logger.error(f"❌ Error stopping bot: {e}")
-            self._add_log(f"❌ Error stopping bot: {e}")
+            # Try to add log, but don't fail if UI is destroyed
+            if not self.shutdown_requested:
+                self._add_log(f"❌ Error stopping bot: {e}")
 
     def open_browser(self):
         """Open browser for SimpleMMO using Playwright"""
@@ -421,7 +559,9 @@ class ModernBotGUI:
                 if engine:
                     page = await engine.get_page()
                     if page:
-                        await page.goto("https://web.simple-mmo.com/")
+                        # Always navigate to travel page instead of home page
+                        await page.goto("https://web.simple-mmo.com/travel")
+                        await page.wait_for_load_state("networkidle")
                         return True
                 return False
 
@@ -438,14 +578,14 @@ class ModernBotGUI:
                         # Fallback to system browser
                         import webbrowser
 
-                        webbrowser.open("https://web.simple-mmo.com/")
+                        webbrowser.open("https://web.simple-mmo.com/travel")
                         self._add_log("🌐 System browser opened (fallback)")
                         logger.info("🌐 System browser opened (fallback)")
                 except Exception as e:
                     # Fallback to system browser
                     import webbrowser
 
-                    webbrowser.open("https://web.simple-mmo.com/")
+                    webbrowser.open("https://web.simple-mmo.com/travel")
                     self._add_log(f"🌐 Browser opened (fallback): {e}")
                     logger.info(f"🌐 Browser opened (fallback): {e}")
 
@@ -484,8 +624,14 @@ class ModernBotGUI:
 
     async def _bot_runner_loop(self):
         """Main bot runner loop"""
-        if not await self.bot_runner.initialize():
-            logger.error("Failed to initialize bot")
+        try:
+            success = await self.bot_runner.initialize()
+            if not success:
+                logger.error("Failed to initialize bot - initialize returned False")
+                return
+        except Exception as e:
+            logger.error(f"Failed to initialize bot - exception: {e}")
+            logger.exception("Full traceback:")
             return
 
         logger.info("Bot runner loop started")
@@ -493,35 +639,65 @@ class ModernBotGUI:
         while self.running:
             if not self.paused:
                 try:
-                    await self.bot_runner.run_cycle()
+                    results = await self.bot_runner.run_cycle()
+
+                    # Check if context was destroyed (navigation crash)
+                    if results.get("context_destroyed"):
+                        logger.error("🚨 Bot detected page navigation crash!")
+                        self._handle_bot_crash("Page navigation detected - context destroyed")
+                        break
+
                 except Exception as e:
-                    logger.error(f"Error in bot cycle: {e}")
+                    error_msg = str(e).lower()
+                    if "execution context was destroyed" in error_msg:
+                        logger.error("🚨 Bot crashed due to page navigation!")
+                        self._handle_bot_crash("Execution context destroyed")
+                        break
+                    else:
+                        logger.error(f"Error in bot cycle: {e}")
 
             await asyncio.sleep(0.1)
 
     def _update_button_states(self):
         """Update button states based on bot status"""
-        if self.running:
-            self.start_btn.configure(state="disabled")
-            self.pause_btn.configure(state="normal")
-            self.stop_btn.configure(state="normal")
-        else:
-            self.start_btn.configure(state="normal")
-            self.pause_btn.configure(state="disabled")
-            self.stop_btn.configure(state="disabled")
+        if not self._widget_exists(self.start_btn):
+            return
+
+        def update_buttons():
+            if self.running:
+                self.start_btn.configure(state="disabled")
+                self.pause_btn.configure(state="normal")
+                self.stop_btn.configure(state="normal")
+            else:
+                self.start_btn.configure(state="normal")
+                self.pause_btn.configure(state="disabled")
+                self.stop_btn.configure(state="disabled")
+
+        self._safe_widget_update(update_buttons)
 
     def _update_status(self, text: str, color: str):
         """Update status display"""
-        self.status_label.configure(text=text)
-        self.status_text.configure(text=text)
+        if not self._widget_exists(self.status_label):
+            return
+
+        def update_status():
+            self.status_label.configure(text=text)
+            self.status_text.configure(text=text)
+
+        self._safe_widget_update(update_status)
 
     def _add_log(self, message: str):
         """Add message to log display"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        log_entry = f"[{timestamp}] {message}\n"
+        if not self._widget_exists(self.log_textbox):
+            return
 
-        self.log_textbox.insert("end", log_entry)
-        self.log_textbox.see("end")
+        def add_log():
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            log_entry = f"[{timestamp}] {message}\n"
+            self.log_textbox.insert("end", log_entry)
+            self.log_textbox.see("end")
+
+        self._safe_widget_update(add_log)
 
     def _start_gui_updater(self):
         """Start GUI update loop"""
@@ -530,29 +706,43 @@ class ModernBotGUI:
 
     def _update_gui(self):
         """Update GUI elements periodically"""
-        if not self.update_running:
+        if not self.update_running or self.shutdown_requested:
             return
 
         try:
             # Update uptime
-            if self.running and self.start_time:
+            if self.running and self.start_time and self._widget_exists(self.uptime_label):
                 uptime = datetime.now() - self.start_time
                 uptime_str = str(uptime).split(".")[0]  # Remove microseconds
-                self.uptime_label.configure(text=f"Uptime: {uptime_str}")
+
+                def update_uptime():
+                    self.uptime_label.configure(text=f"Uptime: {uptime_str}")
+
+                self._safe_widget_update(update_uptime)
 
             # Update cycles and stats
-            if self.bot_runner and self.running:
+            if self.bot_runner and self.running and self._widget_exists(self.cycles_label):
                 stats = self.bot_runner.get_stats()
-                self.cycles_label.configure(text=f"Cycles: {stats.get('cycles', 0)}")
+
+                def update_cycles():
+                    self.cycles_label.configure(text=f"Cycles: {stats.get('cycles', 0)}")
+
+                self._safe_widget_update(update_cycles)
 
                 # Update detailed stats in stats tab
                 self._update_stats_display(stats)
 
         except Exception as e:
-            logger.error(f"GUI update error: {e}")
+            if not self.shutdown_requested:
+                logger.error(f"GUI update error: {e}")
 
-        # Schedule next update
-        self.root.after(1000, self._update_gui)
+        # Schedule next update only if not shutting down
+        if not self.shutdown_requested and self.update_running:
+            try:
+                self.root.after(1000, self._update_gui)
+            except Exception:
+                # Ignore scheduling errors during shutdown
+                pass
 
     def _update_stats_display(self, stats: dict):
         """Update the statistics display"""
@@ -589,11 +779,49 @@ class ModernBotGUI:
             self.root.mainloop()
         except KeyboardInterrupt:
             logger.info("GUI interrupted by user")
+        except Exception as e:
+            logger.error(f"GUI error: {e}")
         finally:
+            # Clean shutdown
+            logger.info("🧹 Starting GUI cleanup...")
             self.update_running = False
             if self.running:
-                self.stop_bot()
+                try:
+                    self.stop_bot()
+                except Exception as e:
+                    logger.debug(f"Error during bot stop: {e}")
+
+            # Give time for any pending operations
+            import time
+
+            time.sleep(0.5)
+
             logger.info("🎮 GUI closed")
+
+    def _handle_bot_crash(self, reason: str):
+        """Handle bot crash by stopping it and updating UI"""
+        logger.error(f"🚨 Bot crashed: {reason}")
+
+        try:
+            # Stop the bot immediately
+            self.running = False
+            if self.bot_runner:
+                self.bot_runner.running = False
+
+            # Clear references to crashed bot
+            self.bot_runner = None
+            self.bot_thread = None
+            self.paused = False
+
+            # Update UI to reflect crash and require manual restart
+            self._update_button_states()
+            self._update_status("🚨 Crashed - Manual Restart Required", "red")
+            self._add_log(f"🚨 Bot crashed: {reason}")
+            self._add_log("🛑 Bot stopped automatically due to page navigation")
+            self._add_log("📝 Please check the browser page and restart when ready")
+
+        except Exception as e:
+            logger.error(f"Error handling bot crash: {e}")
 
 
 def main():

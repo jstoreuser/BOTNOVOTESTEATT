@@ -27,12 +27,9 @@ except ImportError as e:
     except ImportError as e2:
         print(f"❌ Failed to import Modern GUI: {e}")
         print(f"❌ Alternative import also failed: {e2}")
-        print("💡 Trying fallback to old GUI...")
-        try:
-            from src.ui.bot_gui import main as gui_main
-        except ImportError as e3:
-            print(f"❌ All GUI imports failed: {e3}")
-            sys.exit(1)
+        print("❌ CustomTkinter GUI não pode ser carregado. Instale as dependências:")
+        print("pip install customtkinter")
+        sys.exit(1)
 
 
 def main():

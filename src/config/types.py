@@ -30,6 +30,14 @@ class BotConfig(TypedDict, total=False):
     auto_combat: bool
     auto_steps: bool
     auto_captcha: bool
+    auto_quests: bool
+
+    # Quest settings
+    quests_enabled: bool
+    max_quests_per_cycle: int
+    quest_level_min: int
+    quest_level_max: int
+    quest_cycle_interval: int  # Cycles between quest attempts
 
     # Timing settings
     step_delay_min: float

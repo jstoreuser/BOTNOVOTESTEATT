@@ -336,8 +336,8 @@ class GatheringSystem:
                     if element and await element.is_visible():
                         await element.click()
                         logger.debug("Clicked close button")
-                        # Aguarda um pouco menos para o carregamento
-                        await asyncio.sleep(0.5)
+                        # Aguarda 2 segundos para o carregamento
+                        await asyncio.sleep(2.0)
                         return True
                 except Exception:
                     continue
